@@ -110,7 +110,7 @@ export function DrumView({ song, onEdit }: { song: Song; onEdit: () => void }) {
 }
 
 /** Toca el botón al ritmo de la canción y calcula el BPM. */
-function useTapTempo(onBpm: (bpm: number) => void) {
+export function useTapTempo(onBpm: (bpm: number) => void) {
   const taps = useRef<number[]>([])
   return () => {
     const now = performance.now()
