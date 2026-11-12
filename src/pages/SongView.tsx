@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { capoSuggestion, guessKey, keyView } from '../lib/chordsheet'
+import { capoSuggestion, guessKey, keyView, transposeKey } from '../lib/chordsheet'
 import { upcomingSunday, useService } from '../lib/service'
 import { savePersonal, useMe, usePersonal, useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
@@ -38,6 +38,7 @@ export default function SongView() {
   const { prefs, views } = useMe()
   const loaded = useStore((s) => s.loaded)
   const mine = usePersonal(id)
+  const [trans, setTrans] = useState(0)
   // El tono en que suena: el que puso dirección para el domingo, o el de la canción
   const { service } = useService(upcomingSunday())
   const sundayKey = service?.items.find((i) => i.songId === id)?.key
@@ -53,10 +54,13 @@ export default function SongView() {
     )
 
   const written = song.key || guessKey(song.content)
-  const sounding = sundayKey || written
+  const teamKey = sundayKey || written
+  // Transponer para practicar: temporal, solo en esta pantalla (no se guarda ni cambia lo del equipo)
+  const sounding = trans && teamKey ? transposeKey(teamKey, trans) : teamKey
   const capo = mine.capo ?? 0
   const { semis, shapeKey } = keyView(written, sounding, capo)
   const suggested = sounding ? capoSuggestion(sounding) : null
+  const stepTrans = (d: number) => setTrans(((((trans + d) % 12) + 12 + 5) % 12) - 5) // −5…+6
 
   return (
     <div className="pb-16">
@@ -77,10 +81,21 @@ export default function SongView() {
       {/* Controles: tono, acordes on/off, tamaño de letra */}
       <div className="sticky top-[53px] z-10 flex flex-wrap items-center gap-1.5 border-b border-line bg-ink/95 px-4 py-2 backdrop-blur">
         {/* El tono lo decide dirección; aquí solo se ve. El capo es de cada uno. */}
-        <div className="flex items-baseline gap-1.5 rounded-xl bg-panel px-3 py-2" title={sundayKey ? 'Tono del domingo: lo pone dirección' : 'Tono de la canción'}>
-          <span className="text-sm text-slate-500">Suena en</span>
-          <b className="text-accent">{sounding || '—'}</b>
-          {sundayKey && <span className="text-[10px] font-semibold text-slate-400 uppercase">domingo</span>}
+        <div
+          className={`flex items-center rounded-xl ${trans ? 'bg-amber-100 ring-1 ring-amber-300' : 'bg-panel'}`}
+          title={sundayKey ? 'Tono del domingo: lo pone dirección. −/+ transpone solo para ti, por ahora.' : 'Tono de la canción. −/+ transpone solo para ti, por ahora.'}
+        >
+          <button onClick={() => stepTrans(-1)} disabled={!teamKey} className="px-2.5 py-2 text-lg leading-none disabled:opacity-30" aria-label="Bajar medio tono (solo para mí)">
+            −
+          </button>
+          <span className="flex items-baseline gap-1.5 py-2">
+            <span className="text-sm text-slate-500">{trans ? 'Viendo en' : 'Suena en'}</span>
+            <b className={trans ? 'text-amber-900' : 'text-accent'}>{sounding || '—'}</b>
+            {sundayKey && !trans && <span className="text-[10px] font-semibold text-slate-400 uppercase">domingo</span>}
+          </span>
+          <button onClick={() => stepTrans(1)} disabled={!teamKey} className="px-2.5 py-2 text-lg leading-none disabled:opacity-30" aria-label="Subir medio tono (solo para mí)">
+            +
+          </button>
         </div>
         {showChords && sounding && (
           <label className="flex items-center rounded-xl bg-panel px-2 py-1.5">
@@ -118,6 +133,17 @@ export default function SongView() {
           </button>
         </div>
       </div>
+
+      {trans !== 0 && (
+        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          <span className="min-w-0 flex-1">
+            Estás viendo en <b>{sounding}</b> ({trans > 0 ? `+${trans}` : trans}) · el equipo toca en <b>{teamKey}</b>. Solo para ti, no se guarda.
+          </span>
+          <button onClick={() => setTrans(0)} className="shrink-0 rounded-lg bg-white px-2.5 py-1 font-semibold shadow-sm active:bg-amber-100">
+            Volver a {teamKey}
+          </button>
+        </div>
+      )}
 
       <div className="px-4 pt-3">
         <p className="text-sm text-slate-600">
