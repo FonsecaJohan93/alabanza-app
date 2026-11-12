@@ -105,3 +105,7 @@ export const fetchRhythms = () => call<{ rhythms: LibraryRhythm[] }>('/api/rhyth
 export const saveRhythmApi = (draft: RhythmDraft, id?: string) =>
   call<{ rhythm: LibraryRhythm }>(id ? `/api/rhythms/${id}` : '/api/rhythms', { method: id ? 'PUT' : 'POST', body: JSON.stringify(draft) }).then((r) => r.rhythm)
 export const deleteRhythmApi = (id: string) => call<void>(`/api/rhythms/${id}`, { method: 'DELETE' })
+
+/** Dirección cambia los instrumentos de otra persona. */
+export const saveMemberRoles = (username: string, roles: Role[]) =>
+  call<{ member: Member }>(`/api/users/${username}`, { method: 'PUT', body: JSON.stringify({ roles }) }).then((r) => r.member)

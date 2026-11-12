@@ -171,6 +171,14 @@ export async function refreshMembers() {
   }
 }
 
+/** Dirección marca los instrumentos de otra persona. */
+export async function saveMemberRoles(username: string, roles: Role[]) {
+  const m = await api.saveMemberRoles(username, roles)
+  const members = state.members.map((x) => (x.username === m.username ? m : x))
+  writeMembers(members)
+  set({ members })
+}
+
 /** Cambia el nombre y los instrumentos propios. */
 export async function saveProfile(name: string, roles: Role[] | undefined, prefs?: Prefs) {
   const me = await api.saveProfile(name, roles, prefs)

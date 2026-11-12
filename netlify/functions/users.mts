@@ -3,7 +3,8 @@ import { json, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
 import { cleanPrefs, isRole, type Member } from '../../src/lib/team.ts'
 
 // El equipo: GET /api/users lista a todos (sin contraseñas);
-// PUT /api/users/me cambia el nombre y los instrumentos propios.
+// PUT /api/users/me cambia el nombre y los instrumentos propios;
+// PUT /api/users/:username (solo Dirección) cambia los instrumentos de otra persona.
 
 const toMember = (r: UserRecord): Member => ({ username: r.username, name: r.name ?? r.username, roles: r.roles ?? [], prefs: r.prefs ?? {} })
 
@@ -29,6 +30,20 @@ export default async (req: Request, context: Context) => {
     const prefs = cleanPrefs(body.prefs, rec.prefs ?? {})
     const next: UserRecord = { ...rec, name, roles, prefs }
     await store.setJSON(username, next)
+    return json({ member: toMember(next) })
+  }
+
+  // Dirección puede marcar los instrumentos de otra persona del equipo
+  const who = context.params.who
+  if (req.method === 'PUT' && who && who !== 'me') {
+    const me = (await store.get(username, { type: 'json' })) as UserRecord | null
+    if (!me?.roles?.includes('direccion')) return json({ error: 'Solo quien tiene Dirección puede cambiar los instrumentos de otros' }, 400)
+    const rec = (await store.get(who, { type: 'json' })) as UserRecord | null
+    if (!rec) return json({ error: 'Esa persona no está en el equipo' }, 404)
+    const body = await req.json().catch(() => ({}))
+    if (!Array.isArray(body.roles)) return json({ error: 'Faltan los instrumentos' }, 400)
+    const next: UserRecord = { ...rec, roles: [...new Set(body.roles.filter(isRole))] }
+    await store.setJSON(who, next)
     return json({ member: toMember(next) })
   }
 
