@@ -47,6 +47,7 @@ test('nombres de sección', () => {
   assert.equal(sectionName('[Primera Parte]'), 'Primera Parte')
   assert.equal(sectionName('Segunda parte:'), 'Segunda parte')
   assert.equal(sectionName('[Tab - Intro]'), 'Tab - Intro')
+  assert.equal(sectionName('[Pós-Refrão]'), 'Pós-Refrão')
   assert.equal(sectionName('Coronado de gloria'), null)
 })
 
@@ -172,4 +173,19 @@ test('estructura: leer, reordenar y volver a escribir', async () => {
   // Renombrar se registra para la batería
   b[1].name = 'Estrofa 1'
   assert.equal(renames(b).get('Verso 1'), 'Estrofa 1')
+})
+
+test('búsqueda en LaCuerda', async () => {
+  const { laCuerdaSlug, parseLaCuerdaSearch } = await import('./importers.ts')
+  assert.equal(laCuerdaSlug('Renuévame'), 'renuevame')
+  assert.equal(laCuerdaSlug('No hay lugar más alto'), 'no_hay_lugar_mas_alto')
+  assert.equal(laCuerdaSlug('Quién como Tú?'), 'quien_como_tu')
+  const { readFile } = await import('node:fs/promises')
+  const path = process.env.LACUERDA_SEARCH_SAMPLE
+  if (!path) return
+  const r = parseLaCuerdaSearch(await readFile(path, 'utf8'))
+  assert.ok(r.length > 5, String(r.length))
+  const ibi = r.find((x) => x.title === 'Hay Libertad')
+  assert.equal(ibi?.artist, 'La IBI')
+  assert.equal(ibi?.url, 'https://acordes.lacuerda.net/ibi/hay_libertad.shtml')
 })

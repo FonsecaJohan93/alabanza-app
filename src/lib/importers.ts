@@ -75,3 +75,43 @@ export function parseLaCuerda(html: string, url: string): ImportedSong {
   const youtube = yt ? 'https://www.youtube.com/watch?v=' + yt.split('/').pop() : undefined
   return { title, artist, key: guessKey(content), content, sourceUrl: url, youtube }
 }
+
+// ---- Búsqueda en LaCuerda
+
+export interface SearchResult {
+  title: string
+  artist: string
+  url: string
+  source: Source
+}
+
+/** Cómo arma LaCuerda la dirección de una canción a partir del título. */
+export function laCuerdaSlug(title: string): string {
+  return title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+/**
+ * La página de resultados lista filas: un link al artista ("/marcos_witt/")
+ * y los títulos de sus canciones que coinciden.
+ */
+export function parseLaCuerdaSearch(html: string, limit = 30): SearchResult[] {
+  const out: SearchResult[] = []
+  const rowRe = /<a href="\/([a-z0-9_]+)\/">([^<]+)<\/A><\/TD><td><ul[^>]*>([\s\S]*?)<\/ul>/gi
+  let m: RegExpExecArray | null
+  while ((m = rowRe.exec(html)) && out.length < limit) {
+    const [, slug, artistName, list] = m
+    const titleRe = /<li[^>]*><a[^>]*>([^<]+)<\/a>/gi
+    let t: RegExpExecArray | null
+    while ((t = titleRe.exec(list)) && out.length < limit) {
+      const title = decodeEntities(t[1]).trim()
+      out.push({ title, artist: decodeEntities(artistName).trim(), url: `https://acordes.lacuerda.net/${slug}/${laCuerdaSlug(title)}.shtml`, source: 'lacuerda' })
+    }
+  }
+  return out
+}

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import { guessKey, isChordLine, sectionName, textToChordPro } from '../lib/chordsheet'
-import { sourceOf } from '../lib/importers'
+import { sourceOf, type SearchResult } from '../lib/importers'
 import { Button, ErrorBox, Field, Header, inputClass } from '../components/ui'
 import type { SongDraft } from '../types'
 
@@ -67,6 +67,8 @@ export default function NewSong() {
     <div className="pb-10">
       <Header title="Agregar canción" back="/repertorio" />
       <div className="space-y-6 px-4 pt-4">
+        <OnlineSearch onImport={openEditor} />
+
         <form onSubmit={importLink} className="space-y-3 rounded-2xl bg-panel p-4">
           <h2 className="font-semibold">Desde un link</h2>
           <Field label="Link de LaCuerda o Cifra Club">
@@ -116,5 +118,91 @@ export default function NewSong() {
         </button>
       </div>
     </div>
+  )
+}
+
+/** Buscar en internet: LaCuerda se importa con un toque; Cifra Club se abre en el navegador. */
+function OnlineSearch({ onImport }: { onImport: (d: SongDraft) => void }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<SearchResult[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function search(e: FormEvent) {
+    e.preventDefault()
+    if (q.trim().length < 2) return
+    setBusy(true)
+    setError(null)
+    try {
+      setResults(await api.searchOnline(q.trim()))
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function pick(r: SearchResult) {
+    setImporting(r.url)
+    setError(null)
+    try {
+      const s = await api.importFromUrl(r.url)
+      onImport({ ...emptyDraft(), ...s, artist: s.artist || r.artist })
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setImporting(null)
+    }
+  }
+
+  const cifra = `https://www.cifraclub.com/?q=${encodeURIComponent(q.trim())}`
+  return (
+    <section className="space-y-3 rounded-2xl bg-panel p-4">
+      <h2 className="font-semibold">Buscar en internet</h2>
+      <form onSubmit={search} className="flex gap-2">
+        <input
+          className={`${inputClass} min-w-0 flex-1`}
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Título y artista: hay libertad art aguilera"
+        />
+        <Button type="submit" disabled={busy || q.trim().length < 2}>
+          {busy ? '…' : 'Buscar'}
+        </Button>
+      </form>
+      {error && <ErrorBox>{error}</ErrorBox>}
+      {results && (
+        <div>
+          <p className="mb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">En LaCuerda · toca para importar</p>
+          {results.length ? (
+            <ul className="max-h-80 divide-y divide-line overflow-y-auto rounded-xl border border-line">
+              {results.map((r) => (
+                <li key={r.url}>
+                  <button onClick={() => pick(r)} disabled={!!importing} className="flex w-full items-center gap-3 px-3 py-2.5 text-left active:bg-slate-50 disabled:opacity-60">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{r.title}</span>
+                      <span className="block truncate text-sm text-slate-500">{r.artist}</span>
+                    </span>
+                    <span className="text-sm font-semibold text-accent">{importing === r.url ? 'Leyendo…' : 'Importar'}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">No apareció en LaCuerda.</p>
+          )}
+        </div>
+      )}
+      {q.trim().length >= 2 && (
+        <a href={cifra} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-xl bg-accent-soft px-3 py-2.5 text-sm">
+          <span>
+            <b className="text-accent">Buscar en Cifra Club ↗</b>
+            <span className="block text-slate-600">Se abre en tu navegador. Copia los acordes y pégalos abajo en “Pegar el texto”, junto con el link.</span>
+          </span>
+        </a>
+      )}
+    </section>
   )
 }
