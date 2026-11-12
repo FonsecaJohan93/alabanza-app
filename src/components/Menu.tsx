@@ -11,6 +11,7 @@ const Icon = ({ d }: { d: string }) => (
 const ITEMS = [
   { to: '/', label: 'Inicio', icon: 'M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5' },
   { to: '/repertorio', label: 'Repertorio', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm11-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' },
+  { to: '/equipo', label: 'Equipo', icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm10 8v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7' },
 ]
 
 const MenuContext = createContext<() => void>(() => {})

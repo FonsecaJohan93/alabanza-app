@@ -1,4 +1,5 @@
 import type { DrumChart } from './lib/drums.ts'
+import type { Assignment } from './lib/team.ts'
 
 export type Tempo = 'rapida' | 'media' | 'lenta'
 
@@ -39,6 +40,8 @@ export interface ServiceItem {
 export interface Service {
   date: string // AAAA-MM-DD
   items: ServiceItem[]
+  /** Quién toca qué ese día. */
+  team?: Assignment[]
   updatedAt: string
   updatedBy: string
 }

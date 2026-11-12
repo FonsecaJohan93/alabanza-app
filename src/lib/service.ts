@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Service, ServiceItem } from '../types'
+import type { Assignment } from './team'
 import * as api from './api'
 
 // ---- fechas (siempre en la hora local del teléfono)
@@ -65,9 +66,9 @@ export function useService(date: string) {
   }, [date])
 
   const save = useCallback(
-    async (items: ServiceItem[]) => {
+    async (items: ServiceItem[], team?: Assignment[]) => {
       try {
-        const s = await api.saveService(date, items, service?.updatedAt)
+        const s = await api.saveService(date, items, team, service?.updatedAt)
         setService(s)
         writeCache(s)
         return s

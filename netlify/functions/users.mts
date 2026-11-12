@@ -1,0 +1,37 @@
+import type { Config, Context } from '@netlify/functions'
+import { json, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
+import { isRole, type Member } from '../../src/lib/team.ts'
+
+// El equipo: GET /api/users lista a todos (sin contraseñas);
+// PUT /api/users/me cambia el nombre y los instrumentos propios.
+
+const toMember = (r: UserRecord): Member => ({ username: r.username, name: r.name ?? r.username, roles: r.roles ?? [] })
+
+export default async (req: Request, context: Context) => {
+  const username = userFromRequest(req)
+  if (!username) return json({ error: 'Sesión vencida, vuelve a entrar' }, 401)
+  const store = users()
+
+  if (req.method === 'GET' && !context.params.who) {
+    const { blobs } = await store.list()
+    const all = await Promise.all(blobs.map((b) => store.get(b.key, { type: 'json' }) as Promise<UserRecord | null>))
+    const members = all.filter((r): r is UserRecord => !!r).map(toMember)
+    members.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+    return json({ members })
+  }
+
+  if (req.method === 'PUT' && context.params.who === 'me') {
+    const rec = (await store.get(username, { type: 'json' })) as UserRecord | null
+    if (!rec) return json({ error: 'Usuario no encontrado' }, 404)
+    const body = await req.json().catch(() => ({}))
+    const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 40) : rec.name
+    const roles = Array.isArray(body.roles) ? [...new Set(body.roles.filter(isRole))] : (rec.roles ?? [])
+    const next: UserRecord = { ...rec, name, roles }
+    await store.setJSON(username, next)
+    return json({ member: toMember(next) })
+  }
+
+  return json({ error: 'Método no permitido' }, 405)
+}
+
+export const config: Config = { path: ['/api/users', '/api/users/:who'] }

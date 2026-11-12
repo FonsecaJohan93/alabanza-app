@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import ServiceEdit from './pages/ServiceEdit'
 import SongList from './pages/SongList'
+import Team from './pages/Team'
 import { MenuProvider } from './components/Menu'
 import SongView from './pages/SongView'
 import NewSong from './pages/NewSong'
@@ -25,6 +26,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/repertorio" element={<SongList />} />
+          <Route path="/equipo" element={<Team />} />
           <Route path="/servicio/:date" element={<ServiceEdit />} />
           <Route path="/nueva" element={<NewSong />} />
           <Route path="/nueva/editar" element={<SongEdit />} />

@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { groupBySection, isToday, longDate, upcomingSunday, useService } from '../lib/service'
-import { useSession, useSongs } from '../lib/store'
+import { useMembers, useSession, useSongs } from '../lib/store'
+import { ROLES } from '../lib/team'
 import { DrumButton } from '../components/DrumButton'
 import { ErrorBox, Header } from '../components/ui'
 
 export default function Home() {
   const session = useSession()
   const songs = useSongs()
+  const members = useMembers()
   const date = upcomingSunday()
   const { service, loaded, error } = useService(date)
   const byId = new Map(songs.map((s) => [s.id, s]))
@@ -64,8 +66,43 @@ export default function Home() {
               </Link>
             </div>
           </div>
-        )}
+                )}
+
+        {loaded || service ? <SundayTeam date={date} team={service?.team ?? []} members={members} me={session?.username} /> : null}
       </div>
     </div>
+  )
+}
+
+function SundayTeam({ date, team, members, me }: { date: string; team: { role: string; username: string }[]; members: { username: string; name: string }[]; me?: string }) {
+  const nameOf = (u: string) => members.find((m) => m.username === u)?.name ?? u
+  const mine = ROLES.filter((r) => team.some((a) => a.role === r.id && a.username === me)).map((r) => r.label.toLowerCase())
+  const rows = ROLES.map((r) => ({ ...r, people: team.filter((a) => a.role === r.id).map((a) => a.username) })).filter((r) => r.people.length)
+  return (
+    <section className="mt-8">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-xs font-bold tracking-wider text-slate-500 uppercase">Quién toca</h2>
+        <Link to={`/servicio/${date}`} className="text-sm font-semibold text-accent">
+          {rows.length ? 'Cambiar' : 'Asignar'}
+        </Link>
+      </div>
+      {mine.length > 0 && (
+        <p className="mb-2 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">
+          Este domingo te toca: <b>{mine.join(', ')}</b>
+        </p>
+      )}
+      {rows.length ? (
+        <dl className="divide-y divide-line overflow-hidden rounded-2xl bg-panel">
+          {rows.map((r) => (
+            <div key={r.id} className="flex gap-3 px-4 py-2.5">
+              <dt className="w-36 shrink-0 text-sm text-slate-500">{r.label}</dt>
+              <dd className="min-w-0 flex-1 text-sm font-medium">{r.people.map(nameOf).join(', ')}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="rounded-2xl bg-panel px-4 py-3 text-sm text-slate-500">Todavía no se ha asignado quién toca este domingo.</p>
+      )}
+    </section>
   )
 }

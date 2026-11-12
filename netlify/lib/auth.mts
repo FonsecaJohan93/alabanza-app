@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { getStore } from '@netlify/blobs'
+import type { Role } from '../../src/lib/team.ts'
 
 // Seguridad básica a propósito (app interna del equipo de alabanza):
 // contraseñas con scrypt + sal, y un token firmado con HMAC que dura 90 días.
@@ -16,6 +17,8 @@ export interface UserRecord {
   salt: string
   hash: string
   name?: string
+  /** Instrumentos o tareas que la persona hace en el equipo. */
+  roles?: Role[]
   createdAt: string
 }
 

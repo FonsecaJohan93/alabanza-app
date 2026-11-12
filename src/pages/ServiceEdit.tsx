@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { longDate, useService } from '../lib/service'
-import { useSongs } from '../lib/store'
+import { useMembers, useSongs } from '../lib/store'
+import type { Assignment } from '../lib/team'
+import { TeamPicker } from '../components/TeamPicker'
 import { Button, ErrorBox, Header, inputClass } from '../components/ui'
 import type { ServiceItem } from '../types'
 
@@ -17,8 +19,10 @@ export default function ServiceEdit() {
   const { date = '' } = useParams()
   const navigate = useNavigate()
   const songs = useSongs()
+  const members = useMembers()
   const { service, loaded, save } = useService(date)
   const [items, setItems] = useState<ServiceItem[]>([])
+  const [team, setTeam] = useState<Assignment[]>([])
   const [touched, setTouched] = useState(false)
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
@@ -26,7 +30,10 @@ export default function ServiceEdit() {
 
   // Al llegar la lista del servidor se usa como punto de partida (si no se ha tocado nada)
   useEffect(() => {
-    if (!touched && service) setItems(service.items)
+    if (!touched && service) {
+      setItems(service.items)
+      setTeam(service.team ?? [])
+    }
   }, [service, touched])
 
   const byId = useMemo(() => new Map(songs.map((s) => [s.id, s])), [songs])
@@ -55,7 +62,7 @@ export default function ServiceEdit() {
     setBusy(true)
     setError(null)
     try {
-      await save(items)
+      await save(items, team)
       navigate('/', { replace: true })
     } catch (e) {
       setError((e as Error).message)
@@ -140,6 +147,19 @@ export default function ServiceEdit() {
           )}
           {terms.length > 0 && !results.length && <p className="px-1 pt-2 text-sm text-slate-500">No está en el repertorio. Agrégala primero desde Repertorio.</p>}
         </div>
+
+        <section className="rounded-2xl bg-panel px-3 pt-3 pb-1">
+          <h2 className="font-semibold">Quién toca</h2>
+          <p className="text-sm text-slate-500">Elige quién va en cada instrumento este día.</p>
+          <TeamPicker
+            members={members}
+            value={team}
+            onChange={(v) => {
+              setTouched(true)
+              setTeam(v)
+            }}
+          />
+        </section>
 
         {error && <ErrorBox>{error}</ErrorBox>}
       </div>

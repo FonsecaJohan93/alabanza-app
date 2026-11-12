@@ -1,6 +1,7 @@
 import type { Config, Context } from '@netlify/functions'
 import { json, services, userFromRequest } from '../lib/auth.mts'
 import type { Service, ServiceItem } from '../../src/types.ts'
+import { cleanAssignments } from '../../src/lib/team.ts'
 
 // La lista de canciones de cada fecha, compartida por todo el equipo.
 
@@ -19,14 +20,16 @@ export default async (req: Request, context: Context) => {
     if (current && body.baseUpdatedAt !== undefined && body.baseUpdatedAt !== current.updatedAt) {
       return json({ error: `${current.updatedBy} cambió esta lista mientras la editabas`, service: current }, 409)
     }
-    const items: ServiceItem[] = (Array.isArray(body.items) ? body.items : [])
+    const items: ServiceItem[] = (Array.isArray(body.items) ? body.items : body.items === undefined ? (current?.items ?? []) : [])
       .filter((i: ServiceItem) => typeof i?.songId === 'string' && /^[a-f0-9]{16}$/.test(i.songId))
       .slice(0, 30)
       .map((i: ServiceItem) => ({
         songId: i.songId,
         section: typeof i.section === 'string' && i.section.trim() ? i.section.trim().slice(0, 40) : undefined,
       }))
-    const service: Service = { date, items, updatedAt: new Date().toISOString(), updatedBy: username }
+    // Si no se manda el equipo, se conserva el que había
+    const team = body.team === undefined ? current?.team : cleanAssignments(body.team)
+    const service: Service = { date, items, team, updatedAt: new Date().toISOString(), updatedBy: username }
     await store.setJSON(date, service)
     return json({ service })
   }
