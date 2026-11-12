@@ -31,7 +31,7 @@ React 19 + TS + Vite + Tailwind v4 + vite-plugin-pwa. Backend: Netlify Functions
 ## Publicación
 - **Producción:** https://alabanza-mirefugio.netlify.app (sitio Netlify `alabanza-mirefugio`, carpeta vinculada). Env en Netlify: `AUTH_SECRET` (secreto; copia local en `.env` como `PROD_AUTH_SECRET`) e `INVITE_CODE` (código del equipo; copia local en `.env` como `PROD_INVITE_CODE`). Nunca escribir el código en el repo.
 - **Repo:** GitHub `FonsecaJohan93/alabanza-app`, **público** a propósito (como gym-app: el plan gratis de Netlify bloquea builds de repos privados). Aviso de derechos reservados en `LICENSE`. Nunca subir secretos, el código del equipo ni las canciones (`scripts/seed/` y `.env` están en .gitignore).
-- **Deploy:** el sitio está vinculado al repo (rama `main`), pero al 2026-11-12 el push no disparaba builds: falta que el usuario dé acceso a este repo a la app de Netlify en GitHub. Mientras tanto: `netlify deploy --prod --build`.
+- **Deploy:** automático en Netlify al hacer push a `main` (la app de Netlify en GitHub tiene acceso al repo). También funciona `netlify deploy --prod --build`.
 - Cargar datos en producción: `set -a; source .env; set +a; SEED_SECRET=$PROD_AUTH_SECRET node scripts/seed.ts https://alabanza-mirefugio.netlify.app` (firma un token como "repertorio", sin cuenta).
 
 ## Local
