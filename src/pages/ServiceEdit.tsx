@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { longDate, useService } from '../lib/service'
-import { useMembers, useSongs } from '../lib/store'
+import { useMe, useMembers, useSongs } from '../lib/store'
+import { guessKey } from '../lib/chordsheet'
 import type { Assignment } from '../lib/team'
 import { TeamPicker } from '../components/TeamPicker'
 import { Button, ErrorBox, Header, inputClass } from '../components/ui'
 import type { ServiceItem } from '../types'
 
 const SECTIONS = ['Alabanza', 'Adoración', 'Santa Cena', 'Ofrenda']
+const BASE_KEYS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+const KEYS = [...BASE_KEYS, ...BASE_KEYS.map((k) => k + 'm')]
 
 const fold = (s: string) =>
   s
@@ -19,6 +22,7 @@ export default function ServiceEdit() {
   const { date = '' } = useParams()
   const navigate = useNavigate()
   const songs = useSongs()
+  const { isDirector } = useMe()
   const members = useMembers()
   const { service, loaded, save } = useService(date)
   const [items, setItems] = useState<ServiceItem[]>([])
@@ -90,7 +94,7 @@ export default function ServiceEdit() {
                     <span className="mt-0.5 w-5 text-sm font-semibold text-slate-400">{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{s?.title ?? 'Canción borrada'}</p>
-                      <p className="truncate text-sm text-slate-500">{[s?.artist, s?.key].filter(Boolean).join(' · ')}</p>
+                      <p className="truncate text-sm text-slate-500">{s?.artist}</p>
                     </div>
                     <div className="flex shrink-0 items-center">
                       <button onClick={() => move(i, -1)} disabled={i === 0} className="px-2 py-1 text-lg text-slate-500 disabled:opacity-25" aria-label="Subir">
@@ -103,6 +107,27 @@ export default function ServiceEdit() {
                         ✕
                       </button>
                     </div>
+                  </div>
+                  {/* Tono del domingo: lo elige solo dirección; los demás lo ven */}
+                  <div className="mt-2 ml-7 flex items-center gap-2 text-sm">
+                    <span className="text-slate-500">Suena en</span>
+                    {isDirector ? (
+                      <select
+                        value={it.key ?? ''}
+                        onChange={(e) => change(items.map((x, j) => (j === i ? { ...x, key: e.target.value || undefined } : x)))}
+                        className="rounded-lg bg-accent-soft px-2 py-1 font-bold text-accent"
+                        aria-label={`Tono del domingo para ${s?.title ?? 'la canción'}`}
+                      >
+                        <option value="">{(s?.key || (s && guessKey(s.content)) || '—') + ' (el de la canción)'}</option>
+                        {KEYS.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="rounded-lg bg-accent-soft px-2 py-0.5 font-bold text-accent">{it.key || s?.key || '—'}</span>
+                    )}
                   </div>
                   <div className="mt-2 ml-7 flex flex-wrap gap-1.5">
                     {SECTIONS.map((sec) => (

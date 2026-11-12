@@ -209,3 +209,17 @@ test('editar solo la letra conserva los acordes', async () => {
   // Sin cambios, todo igual
   assert.deepEqual(applyLyrics(body, lyricsOf(body)), body)
 })
+
+test('tono del domingo y capo', async () => {
+  const { keyView } = await import('./chordsheet.ts')
+  // Escrita en G, el domingo suena en G, sin capo: nada cambia
+  assert.deepEqual(keyView('G', 'G'), { semis: 0, shapeKey: 'G' })
+  // El domingo suena en A: los acordes suben 2
+  assert.deepEqual(keyView('G', 'A'), { semis: 2, shapeKey: 'A' })
+  // Suena en A con capo 2: el guitarrista toca formas de G (sin mover)
+  assert.deepEqual(keyView('G', 'A', 2), { semis: 0, shapeKey: 'G' })
+  // Suena en Bb con capo 1: formas de A
+  assert.deepEqual(keyView('G', 'Bb', 1), { semis: 2, shapeKey: 'A' })
+  // Tonos menores
+  assert.deepEqual(keyView('Em', 'F#m', 2), { semis: 0, shapeKey: 'Em' })
+})

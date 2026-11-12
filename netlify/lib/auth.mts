@@ -11,6 +11,8 @@ const TOKEN_DAYS = 90
 export const users = () => getStore({ name: 'users', consistency: 'strong' })
 export const songs = () => getStore({ name: 'songs', consistency: 'strong' })
 export const services = () => getStore({ name: 'services', consistency: 'strong' })
+/** Datos personales de cada persona por canción (capo, notas): uno por usuario. */
+export const personal = () => getStore({ name: 'personal', consistency: 'strong' })
 
 export interface UserRecord {
   username: string

@@ -72,7 +72,7 @@ export default function Home() {
                                 <p className="truncate font-medium">{s.title}</p>
                                 {s.artist && <p className="truncate text-sm text-slate-500">{s.artist}</p>}
                               </div>
-                              {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{s.key}</span>}
+                              {(it.key || s.key) && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent" title="Suena en">{it.key || s.key}</span>}
                               {views.lyrics && views.primary !== 'voces' && <VoiceButton song={s} />}
                               {views.drums && views.primary !== 'bateria' && <DrumButton song={s} />}
                             </Link>

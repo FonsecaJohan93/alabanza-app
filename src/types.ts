@@ -34,6 +34,8 @@ export interface ServiceItem {
   songId: string
   /** Bloque del servicio, p. ej. "Alabanza" o "Adoración". */
   section?: string
+  /** Tono en que suena ese día (lo pone dirección). Sin tono: el de la canción. */
+  key?: string
 }
 
 /** La lista de canciones de un domingo (o de cualquier fecha). */

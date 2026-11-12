@@ -1,5 +1,6 @@
 import type { Service, ServiceItem, Song, SongDraft } from '../types'
 import type { ImportedSong, SearchResult } from './importers'
+import type { Personal, PersonalSong } from './personal'
 import type { Assignment, Member, Prefs, Role } from './team'
 
 export interface Session {
@@ -90,3 +91,8 @@ export const saveProfile = (name: string, roles: Role[] | undefined, prefs?: Pre
   call<{ member: Member }>('/api/users/me', { method: 'PUT', body: JSON.stringify({ name, roles, prefs }) }).then((r) => r.member)
 
 export const searchOnline = (q: string) => call<{ results: SearchResult[] }>(`/api/search?q=${encodeURIComponent(q)}`).then((r) => r.results)
+
+export const fetchPersonal = () => call<{ personal: Personal }>('/api/personal').then((r) => r.personal)
+
+export const savePersonalSong = (songId: string, data: PersonalSong) =>
+  call<{ song: PersonalSong }>(`/api/personal/${songId}`, { method: 'PUT', body: JSON.stringify(data) }).then((r) => r.song)

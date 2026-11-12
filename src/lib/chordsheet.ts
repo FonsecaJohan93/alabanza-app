@@ -372,3 +372,14 @@ export function blocksOf(lines: SheetLine[]): SheetBlock[] {
   })
   return blocks
 }
+
+/**
+ * Cómo ve una persona la hoja: la canción está escrita en `written`, el
+ * equipo la toca en `sounding` (el tono del domingo) y la persona usa
+ * `capo`. Devuelve cuántos semitonos mover los acordes escritos y en qué
+ * tono quedan las formas que va a tocar.
+ */
+export function keyView(written: string, sounding: string, capo = 0): { semis: number; shapeKey: string } {
+  const shapeKey = capo ? transposeKey(sounding, -capo) : sounding
+  return { semis: written && shapeKey ? semitonesBetween(written, shapeKey) : 0, shapeKey }
+}
