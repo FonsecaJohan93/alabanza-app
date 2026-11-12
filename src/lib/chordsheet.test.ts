@@ -189,3 +189,23 @@ test('búsqueda en LaCuerda', async () => {
   assert.equal(ibi?.artist, 'La IBI')
   assert.equal(ibi?.url, 'https://acordes.lacuerda.net/ibi/hay_libertad.shtml')
 })
+
+test('editar solo la letra conserva los acordes', async () => {
+  const { lyricsOf, applyLyrics } = await import('./structure.ts')
+  const body = ['[Em]  [C]', '[G]Te adoro, el am[D]ado', 'Rey de [C]reyes', '', '[Am]Santo']
+  assert.equal(lyricsOf(body), 'Te adoro, el amado\nRey de reyes\n\nSanto')
+  // Cambiar "el" por "mi": los acordes siguen en sus palabras
+  const r = applyLyrics(body, 'Te adoro, mi amado\nRey de reyes\n\nSanto')
+  assert.deepEqual(r, ['[Em]  [C]', '[G]Te adoro, mi am[D]ado', 'Rey de [C]reyes', '', '[Am]Santo'])
+  // Palabra más larga: el acorde de "amado" sigue en "amadísimo"
+  assert.equal(applyLyrics(body, 'Te adoro, el amadísimo\nRey de reyes\n\nSanto')[1], '[G]Te adoro, el am[D]adísimo')
+  // Reescribir una línea: el acorde se queda en la misma palabra (2.ª)
+  assert.equal(applyLyrics(body, 'Te adoro, el amado\nLínea nueva\n\nSanto')[2], 'Línea [C]nueva')
+  // Insertar una línea: es nueva y sin acordes; las demás no cambian
+  const r2 = applyLyrics(body, 'Te adoro, el amado\nOtra línea\nRey de reyes\n\nSanto')
+  assert.deepEqual(r2, ['[Em]  [C]', '[G]Te adoro, el am[D]ado', 'Otra línea', 'Rey de [C]reyes', '', '[Am]Santo'])
+  // Borrar una línea
+  assert.deepEqual(applyLyrics(body, 'Te adoro, el amado\n\nSanto'), ['[Em]  [C]', '[G]Te adoro, el am[D]ado', '', '[Am]Santo'])
+  // Sin cambios, todo igual
+  assert.deepEqual(applyLyrics(body, lyricsOf(body)), body)
+})

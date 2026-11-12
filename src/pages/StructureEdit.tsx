@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { chordProToText, parseChordPro, textToChordPro } from '../lib/chordsheet'
-import { moveBlock, newId, parseStructure, renames, serializeStructure, type Block } from '../lib/structure'
+import { parseChordPro } from '../lib/chordsheet'
+import { applyLyrics, lyricsOf, moveBlock, newId, parseStructure, renames, serializeStructure, type Block } from '../lib/structure'
 import { saveSong, useSong, useStore } from '../lib/store'
 import { CUE_PRESETS, CuePill } from '../components/Cue'
 import { Button, ErrorBox, Header } from '../components/ui'
@@ -238,16 +238,14 @@ function Editor({ song }: { song: Song }) {
                   {editingLyrics?.id === b.id && (
                     <div className="px-3 pb-2">
                       <p className="mb-1 text-xs text-slate-500">
-                        Corrige la letra. Los acordes van en la línea de arriba; si no tocas esa línea, se quedan donde están.
+                        Corrige la letra. Los acordes no se ven aquí, pero se quedan en su lugar.
                       </p>
                       <textarea
                         autoFocus
                         value={editingLyrics.text}
                         onChange={(e) => setEditingLyrics({ id: b.id, text: e.target.value })}
                         rows={Math.max(4, editingLyrics.text.split('\n').length + 1)}
-                        wrap="off"
-                        spellCheck={false}
-                        className="w-full rounded-xl border border-line bg-ink/50 p-2 font-mono text-[13px] leading-snug outline-none focus:border-accent"
+                        className="w-full rounded-xl border border-line bg-ink/50 p-2 text-[17px] leading-snug outline-none focus:border-accent"
                       />
                       <div className="mt-1.5 flex justify-end gap-2">
                         <Button variant="ghost" onClick={() => setEditingLyrics(null)}>
@@ -255,7 +253,7 @@ function Editor({ song }: { song: Song }) {
                         </Button>
                         <Button
                           onClick={() => {
-                            update(b.id, { body: textToChordPro(editingLyrics.text).split('\n') })
+                            update(b.id, { body: applyLyrics(b.body, editingLyrics.text) })
                             setEditingLyrics(null)
                           }}
                         >
@@ -267,7 +265,7 @@ function Editor({ song }: { song: Song }) {
                   {!collapsed.has(b.id) && (
                     <div className="mt-1 flex items-center gap-0.5 border-t border-line px-2 py-1 text-sm">
                       <button
-                        onClick={() => setEditingLyrics({ id: b.id, text: chordProToText(b.body.join('\n')) })}
+                        onClick={() => setEditingLyrics({ id: b.id, text: lyricsOf(b.body) })}
                         className="rounded-lg px-2 py-1 font-semibold text-accent active:bg-accent-soft"
                       >
                         ✎ Letra
