@@ -157,3 +157,19 @@ test('vistas según instrumentos', async () => {
   assert.ok(mix.chords && mix.lyrics && !mix.drums)
   assert.equal(viewsFor(['acustica'], 'letra').primary, 'voces') // la elección manual manda
 })
+
+test('estructura: leer, reordenar y volver a escribir', async () => {
+  const { parseStructure, serializeStructure, moveBlock, renames } = await import('./structure.ts')
+  const cp = '[G]Intro sin nombre\n\n{c: Verso 1}\n[G]Hola\n\n[D]Segundo párrafo\n\n{ci: Otra vez al coro}\n{c: Coro}\n\n[C]Santo'
+  const b = parseStructure(cp)
+  assert.deepEqual(b.map((x) => [x.kind, x.name, x.body.length]), [['section', '', 1], ['section', 'Verso 1', 3], ['cue', 'Otra vez al coro', 0], ['section', 'Coro', 1]])
+  // Escribir y volver a leer no cambia nada
+  const out = serializeStructure(b)
+  assert.equal(serializeStructure(parseStructure(out)), out)
+  // Mover el coro al principio
+  const moved = moveBlock(b, 3, 0)
+  assert.ok(serializeStructure(moved).startsWith('{c: Coro}\n[C]Santo\n\n[G]Intro'))
+  // Renombrar se registra para la batería
+  b[1].name = 'Estrofa 1'
+  assert.equal(renames(b).get('Verso 1'), 'Estrofa 1')
+})

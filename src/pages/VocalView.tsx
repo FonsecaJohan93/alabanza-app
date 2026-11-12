@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { blocksOf, insertCue, parseChordPro, removeLine, type SheetBlock } from '../lib/chordsheet'
-import { saveSong, useMe, useSong, useStore } from '../lib/store'
-import { CUE_PRESETS, CuePill } from '../components/Cue'
-import { ErrorBox, Header } from '../components/ui'
+import { Link, useParams } from 'react-router-dom'
+import { blocksOf, parseChordPro, type SheetBlock } from '../lib/chordsheet'
+import { useMe, useSong, useStore } from '../lib/store'
+import { CuePill } from '../components/Cue'
+import { Header } from '../components/ui'
 import { PulseButton } from '../components/Pulse'
 
 function usePref(key: string, initial: number): [number, (v: number) => void] {
@@ -53,10 +53,6 @@ export default function VocalView() {
   const { prefs } = useMe()
   const loaded = useStore((s) => s.loaded)
   const [fontSize, setFontSize] = usePref('alabanza:vocalFont', 26)
-  const [editing, setEditing] = useState(false)
-  const [adding, setAdding] = useState<number | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   useWakeLock()
 
   const blocks = useMemo(() => blocksOf(parseChordPro(song?.content ?? '')), [song?.content])
@@ -67,36 +63,6 @@ export default function VocalView() {
         <Header title="Voces" back="/" />
         <p className="p-8 text-center text-slate-500">{loaded ? 'Esa canción no existe o fue borrada.' : 'Cargando…'}</p>
       </div>
-    )
-
-  async function change(content: string) {
-    if (!song) return
-    setBusy(true)
-    setError(null)
-    try {
-      await saveSong({ ...song, content }, song)
-      setAdding(null)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const lineCount = song.content.split('\n').length
-
-  /** Lugar para poner un indicador (solo en modo edición). */
-  const slot = (at: number) =>
-    !editing ? null : adding === at ? (
-      <CueChooser key={'c' + at} busy={busy} onPick={(text) => change(insertCue(song.content, at, text))} onCancel={() => setAdding(null)} />
-    ) : (
-      <button
-        key={'s' + at}
-        onClick={() => setAdding(at)}
-        className="my-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-amber-300 px-3 py-1 text-left text-sm text-amber-700 active:bg-amber-50"
-      >
-        + Indicador aquí
-      </button>
     )
 
   return (
@@ -115,37 +81,24 @@ export default function VocalView() {
                 A+
               </button>
             </div>
-            <button
-              onClick={() => (setEditing(!editing), setAdding(null))}
-              className={`rounded-xl px-3 py-1.5 text-sm font-semibold ${editing ? 'bg-amber-400 text-amber-950' : 'text-accent active:bg-accent-soft'}`}
-            >
-              {editing ? 'Listo' : 'Editar orden'}
-            </button>
+            <Link to={`/cancion/${song.id}/estructura`} className="rounded-xl px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft">
+              Editar
+            </Link>
           </>
         }
       />
-      {editing && (
-        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-          Toca “+ Indicador aquí” entre párrafos. Lo ve todo el equipo, también en la hoja de acordes.
-        </p>
-      )}
-      {error && (
-        <div className="px-4 pt-3">
-          <ErrorBox>{error}</ErrorBox>
-        </div>
-      )}
 
-      <div className="pages px-5 pt-4 leading-snug" style={{ fontSize, ['--pages-top' as string]: editing ? '7.5rem' : '4.5rem' }}>
+      <div className="pages px-5 pt-4 leading-snug" style={{ fontSize, ['--pages-top' as string]: '4.5rem' }}>
         {blocks.map((b) => {
           const first = b.lines[0]?.line
           const section = first?.type === 'section' ? first.name : undefined
           const words = lyricText(b)
           let body: React.ReactNode
           if (first?.type === 'cue') {
-            body = <CuePill text={first.text} size="lg" onRemove={editing ? () => change(removeLine(song.content, b.start)) : undefined} />
+            body = <CuePill text={first.text} size="lg" />
           } else if (!words.length) {
             // Sección sin letra (intro, solo…): se marca como instrumental
-            if (!section) return <div key={b.start}>{slot(b.start)}</div>
+            if (!section) return null
             body = <p className="text-[0.6em] font-semibold tracking-wide text-slate-400 uppercase">♪ {section} · instrumental</p>
           } else {
             body = (
@@ -158,49 +111,12 @@ export default function VocalView() {
             )
           }
           return (
-            <div key={b.start} className="break-inside-avoid">
-              {slot(b.start)}
-              <div className="mb-[0.8em]">{body}</div>
+            <div key={b.start} className="mb-[0.8em] break-inside-avoid">
+              {body}
             </div>
           )
         })}
-        {slot(lineCount)}
       </div>
-    </div>
-  )
-}
-
-function CueChooser({ busy, onPick, onCancel }: { busy: boolean; onPick: (t: string) => void; onCancel: () => void }) {
-  const [custom, setCustom] = useState('')
-  return (
-    <div className="my-2 rounded-xl border border-amber-300 bg-amber-50 p-2 text-base" style={{ fontSize: 15 }}>
-      <div className="flex flex-wrap gap-1.5">
-        {CUE_PRESETS.map((p) => (
-          <button key={p} disabled={busy} onClick={() => onPick(p)} className="rounded-full bg-white px-3 py-1 text-sm font-medium text-amber-900 shadow-sm active:bg-amber-100">
-            {p}
-          </button>
-        ))}
-      </div>
-      <form
-        className="mt-2 flex gap-1.5"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (custom.trim()) onPick(custom.trim())
-        }}
-      >
-        <input
-          value={custom}
-          onChange={(e) => setCustom(e.target.value)}
-          placeholder="Otro: p. ej. Coro x3, sube de tono…"
-          className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-amber-400"
-        />
-        <button type="submit" disabled={busy || !custom.trim()} className="rounded-lg bg-amber-400 px-3 text-sm font-semibold text-amber-950 disabled:opacity-40">
-          Poner
-        </button>
-        <button type="button" onClick={onCancel} className="px-2 text-sm text-amber-800">
-          Cancelar
-        </button>
-      </form>
     </div>
   )
 }

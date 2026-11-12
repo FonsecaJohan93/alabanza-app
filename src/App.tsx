@@ -10,6 +10,7 @@ import { MenuProvider } from './components/Menu'
 import SongView from './pages/SongView'
 import VocalView from './pages/VocalView'
 import DrumPage from './pages/DrumPage'
+import StructureEdit from './pages/StructureEdit'
 import Settings from './pages/Settings'
 import NewSong from './pages/NewSong'
 import SongEdit from './pages/SongEdit'
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/cancion/:id/editar" element={<SongEdit />} />
           <Route path="/cancion/:id/voces" element={<VocalView />} />
           <Route path="/cancion/:id/bateria" element={<DrumPage />} />
+          <Route path="/cancion/:id/estructura" element={<StructureEdit />} />
           <Route path="/configuracion" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

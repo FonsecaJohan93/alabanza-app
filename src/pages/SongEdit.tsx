@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { chordProToText, guessKey, semitonesBetween, textToChordPro, transposeChordPro } from '../lib/chordsheet'
 import { ApiError } from '../lib/api'
 import { acceptRemote, removeSong, saveSong, useSong, useSongs } from '../lib/store'
@@ -171,6 +171,11 @@ function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) 
           </div>
           {tab === 'editar' ? (
             <>
+              {existing && (
+                <Link to={`/cancion/${existing.id}/estructura`} className="mb-2 flex items-center justify-between rounded-xl bg-accent-soft px-3 py-2 text-sm font-semibold text-accent">
+                  Ordenar y editar por secciones (arrastrar) <span aria-hidden="true">→</span>
+                </Link>
+              )}
               <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
                 <span>{mode === 'arriba' ? 'Acordes en la línea de arriba' : 'ChordPro: [G] antes de la sílaba'}</span>
                 <button onClick={() => switchMode(mode === 'arriba' ? 'chordpro' : 'arriba')} className="text-accent underline">
