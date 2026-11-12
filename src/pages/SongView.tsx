@@ -5,6 +5,7 @@ import { useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
 import { DrumButton } from '../components/DrumButton'
 import { VoiceButton } from '../components/VoiceButton'
+import { PulseButton } from '../components/Pulse'
 import { Header, TEMPO_LABEL } from '../components/ui'
 
 // Preferencias de cada persona en su teléfono (no se comparten con el equipo)
@@ -86,6 +87,7 @@ export default function SongView() {
           </button>
         )}
         <div className="flex-1" />
+        <PulseButton bpm={song.bpm} feel={song.drums?.feel} />
         <button
           onClick={() => setShowChords(!showChords)}
           className={`rounded-xl px-2.5 py-2 text-sm font-medium ${showChords ? 'bg-panel' : 'bg-accent text-white'}`}

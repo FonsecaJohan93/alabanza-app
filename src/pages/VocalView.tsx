@@ -4,6 +4,7 @@ import { blocksOf, insertCue, parseChordPro, removeLine, type SheetBlock } from 
 import { saveSong, useSong, useStore } from '../lib/store'
 import { CUE_PRESETS, CuePill } from '../components/Cue'
 import { ErrorBox, Header } from '../components/ui'
+import { PulseButton } from '../components/Pulse'
 
 function usePref(key: string, initial: number): [number, (v: number) => void] {
   const [v, setV] = useState(() => {
@@ -104,6 +105,7 @@ export default function VocalView() {
         back={`/cancion/${song.id}`}
         actions={
           <>
+            <PulseButton bpm={song.bpm} feel={song.drums?.feel} className="py-1.5" />
             <div className="flex rounded-xl bg-panel text-sm">
               <button onClick={() => setFontSize(Math.max(18, fontSize - 3))} className="px-2 py-1.5" aria-label="Letra más pequeña">
                 A−

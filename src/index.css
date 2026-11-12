@@ -63,3 +63,40 @@ body {
     overscroll-behavior-x: contain;
   }
 }
+
+/* Pulso visual: la baqueta baja y pega; el destello se apaga enseguida */
+@keyframes pulse-stick {
+  0% {
+    transform: rotate(-28deg);
+  }
+  45% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(-28deg);
+  }
+}
+@keyframes pulse-flash {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+.pulse-stick {
+  transform-origin: 60px 2px;
+  animation: pulse-stick ease-out both;
+}
+.pulse-flash {
+  transform-origin: 30px 22px;
+  animation: pulse-flash ease-out both;
+}
+/* Quien prefiere menos movimiento: solo las luces, sin baqueta animada */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-stick {
+    animation: none;
+  }
+}

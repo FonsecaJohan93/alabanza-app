@@ -135,3 +135,13 @@ test('bloques por estrofa', () => {
   // La sección se queda con su letra aunque haya una línea vacía en medio
   assert.deepEqual(blocksOf(parseChordPro('{c: Coro}\n\n[G]a')).map((x) => x.lines.length), [2])
 })
+
+test('pulso: golpe correcto en el tiempo', async () => {
+  const { beatAt, beatsPerBar } = await import('./pulse.ts')
+  assert.equal(beatAt(1000, 1000, 60), 0)
+  assert.equal(beatAt(1999, 1000, 60), 0)
+  assert.equal(beatAt(2000, 1000, 60), 1)
+  assert.equal(beatAt(1000 + 60000, 1000, 120), 120) // 120 golpes en un minuto
+  assert.equal(beatsPerBar('6/8'), 6)
+  assert.equal(beatsPerBar('Balada 4/4'), 4)
+})
