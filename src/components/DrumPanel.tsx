@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { chartFromSong, DRUM_PARTS, DYNAMICS, FEELS, rhythmOf, type DrumChart, type DrumPart, type DrumSection, type Dynamic } from '../lib/drums'
+import { chartFromSong, DRUM_PARTS, DYNAMICS, FEELS, type DrumChart, type DrumPart, type DrumSection, type Dynamic } from '../lib/drums'
 import { saveSong } from '../lib/store'
 import type { Song } from '../types'
 import { DrumKitIcon, DynamicIcon, PartIcon } from './DrumIcons'
-import { RhythmPlay } from './RhythmEditor'
 import { Button, ErrorBox, inputClass } from './ui'
 
 const partLabel = (p: DrumPart) => DRUM_PARTS.find((x) => x.id === p)?.label ?? p
@@ -75,10 +74,6 @@ export function DrumView({ song, onEdit }: { song: Song; onEdit: () => void }) {
             <li key={i} className="rounded-2xl bg-panel p-3">
               <div className="flex items-center gap-2">
                 <p className="flex-1 font-semibold">{s.name}</p>
-                {(() => {
-                  const r = rhythmOf(chart, s)
-                  return r ? <RhythmPlay id={`view-${song.id}-${i}`} pattern={r.pattern} bpm={song.bpm} feel={chart?.feel} label={r.name} /> : null
-                })()}
                 {s.dynamic && (
                   <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-sm text-accent">
                     <DynamicIcon dynamic={s.dynamic} size={18} />
@@ -252,23 +247,6 @@ export function DrumEditor({ song, onDone }: { song: Song; onDone: () => void })
                   )
                 })}
               </div>
-              {chart.rhythms?.length ? (
-                <label className="mt-2 flex items-center gap-2 text-sm">
-                  <span className="text-slate-600">Ritmo</span>
-                  <select
-                    value={s.rhythm ?? ''}
-                    onChange={(e) => setSection(i, { rhythm: e.target.value || undefined, pattern: undefined })}
-                    className="rounded-lg bg-accent-soft px-2 py-1 font-semibold text-accent"
-                  >
-                    <option value="">Sin ritmo</option>
-                    {chart.rhythms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
               <input
                 className={`${inputClass} mt-2 py-1.5 text-sm`}
                 placeholder="Nota: p. ej. entrar en el 2.º compás, fill en toms"

@@ -3,6 +3,7 @@ import type { Song, SongDraft } from '../types'
 import * as api from './api'
 import { viewsFor, type Member, type Prefs, type Role, type Views } from './team'
 import type { Personal, PersonalSong } from './personal'
+import type { LibraryRhythm } from './rhythm'
 
 // Estado global pequeño: la sesión y el repertorio del equipo. El repertorio
 // se guarda también en el teléfono para poder ver canciones sin señal.
@@ -13,6 +14,8 @@ interface State {
   members: Member[]
   /** Mi capo y mis notas por canción (solo míos). */
   personal: Personal
+  /** Biblioteca de ritmos del equipo. */
+  rhythms: LibraryRhythm[]
   loaded: boolean
   error: string | null
 }
@@ -67,7 +70,7 @@ function writeMembers(m: Member[]) {
 }
 
 const session = api.loadSession()
-let state: State = { session, songs: session ? readCache() : [], members: session ? readMembers() : [], personal: session ? readPersonal() : {}, loaded: false, error: null }
+let state: State = { session, songs: session ? readCache() : [], members: session ? readMembers() : [], personal: session ? readPersonal() : {}, rhythms: [], loaded: false, error: null }
 const listeners = new Set<() => void>()
 
 function set(patch: Partial<State>) {
@@ -96,6 +99,7 @@ export function useMe(): { prefs: Prefs; roles: Role[]; views: Views; loaded: bo
 }
 export const usePersonal = (songId: string | undefined): PersonalSong => useStore((s) => (songId ? s.personal[songId] : undefined) ?? EMPTY)
 const EMPTY: PersonalSong = {}
+export const useRhythms = () => useStore((s) => s.rhythms)
 export const useSong = (id: string | undefined) => useStore((s) => s.songs.find((x) => x.id === id))
 
 function sorted(songs: Song[]) {
@@ -110,10 +114,11 @@ function putSong(song: Song) {
 
 export function signIn(s: api.Session) {
   api.saveSession(s)
-  set({ session: s, songs: [], members: [], personal: {}, loaded: false })
+  set({ session: s, songs: [], members: [], personal: {}, rhythms: [], loaded: false })
   void refreshSongs()
   void refreshMembers()
   void refreshPersonal()
+  void refreshRhythms()
 }
 
 export function signOut() {
@@ -125,7 +130,7 @@ export function signOut() {
   } catch {
     /* nada */
   }
-  set({ session: null, songs: [], members: [], personal: {}, loaded: false })
+  set({ session: null, songs: [], members: [], personal: {}, rhythms: [], loaded: false })
 }
 
 api.setUnauthorizedHandler(signOut)
@@ -200,8 +205,28 @@ export async function savePersonal(songId: string, patch: PersonalSong) {
   set({ personal })
 }
 
+export async function refreshRhythms() {
+  try {
+    set({ rhythms: await api.fetchRhythms() })
+  } catch {
+    /* sin señal */
+  }
+}
+
+export async function saveRhythm(draft: api.RhythmDraft, id?: string) {
+  const r = await api.saveRhythmApi(draft, id)
+  set({ rhythms: id ? state.rhythms.map((x) => (x.id === id ? r : x)) : [...state.rhythms, r] })
+  return r
+}
+
+export async function deleteRhythm(id: string) {
+  await api.deleteRhythmApi(id)
+  set({ rhythms: state.rhythms.filter((x) => x.id !== id) })
+}
+
 if (session) {
   void refreshSongs()
   void refreshMembers()
   void refreshPersonal()
+  void refreshRhythms()
 }

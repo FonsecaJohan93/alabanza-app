@@ -72,3 +72,34 @@ export function presets(steps: number): { name: string; pattern: Pattern }[] {
     { name: 'Coro con todo', pattern: { steps, hits: { bombo: [0, 3, 8, 11], caja: [4, 12], crash: [0], ride: [0, 2, 4, 6, 8, 10, 12, 14] } } },
   ]
 }
+
+// ---- Biblioteca de ritmos del equipo (no depende de ninguna canción)
+
+export const METERS = ['4/4', '3/4', '6/8'] as const
+export type Meter = (typeof METERS)[number]
+
+export interface LibraryRhythm {
+  id: string
+  name: string
+  meter: Meter
+  /** BPM para practicar el ritmo (en una canción suena al BPM de la canción). */
+  bpm: number
+  pattern: Pattern
+  createdBy: string
+  updatedAt: string
+}
+
+/** Compás de una canción a partir de su feel ("6/8", "Balada 4/4"…). */
+export const meterOf = (feel?: string): Meter => (feel && /6\/8/.test(feel) ? '6/8' : feel && /3\/4/.test(feel) ? '3/4' : '4/4')
+
+export function cleanLibraryRhythm(v: unknown): Omit<LibraryRhythm, 'id' | 'createdBy' | 'updatedAt'> | string {
+  if (!v || typeof v !== 'object') return 'Ritmo inválido'
+  const o = v as Record<string, unknown>
+  const meter = METERS.includes(o.meter as Meter) ? (o.meter as Meter) : '4/4'
+  const pattern = cleanPattern(o.pattern)
+  if (!pattern) return 'El ritmo no tiene golpes'
+  if (pattern.steps !== gridFor(meter).steps) return 'El ritmo no corresponde al compás'
+  const name = typeof o.name === 'string' && o.name.trim() ? o.name.trim().slice(0, 40) : 'Ritmo'
+  const bpm = Math.round(Number(o.bpm))
+  return { name, meter, bpm: bpm >= 40 && bpm <= 240 ? bpm : 80, pattern }
+}

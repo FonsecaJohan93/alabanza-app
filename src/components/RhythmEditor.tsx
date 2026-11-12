@@ -1,83 +1,103 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DRUM_PARTS } from '../lib/drums'
-import { countLabels, gridFor, hasHit, presets, toggleHit, type Pattern } from '../lib/rhythm'
+import { countLabels, gridFor, hasHit, METERS, presets, toggleHit, type Meter, type Pattern } from '../lib/rhythm'
+import type { RhythmDraft } from '../lib/api'
 import { playRhythm, setClickOn, stopRhythm, useClickOn, usePlaying } from '../lib/drumAudio'
 import { PartIcon } from './DrumIcons'
 import { Button } from './ui'
 
 /**
  * Cuadrícula tipo partitura de batería: filas = piezas, columnas = el compás
- * contado ("1 e y a 2…"). Se tocan las casillas y suena en bucle al BPM.
+ * contado ("1 e y a 2…"). Se tocan las casillas y suena en bucle; el BPM se
+ * puede mover mientras suena para practicar.
  */
 export function RhythmEditor({
-  title,
-  feel,
-  bpm,
   initial,
-  initialName = '',
   onSave,
   onDelete,
   onClose,
 }: {
-  title: string
-  feel?: string
-  bpm?: number
-  initial?: Pattern
-  /** Nombre del ritmo ("Ritmo 1", "Coro fuerte"…). */
-  initialName?: string
-  onSave: (p: Pattern | undefined, name: string) => void
-  onDelete?: () => void
+  initial?: Partial<RhythmDraft>
+  onSave: (draft: RhythmDraft) => void | Promise<void>
+  onDelete?: () => void | Promise<void>
   onClose: () => void
 }) {
-  const { beats, sub, steps } = gridFor(feel)
-  const [name, setName] = useState(initialName)
-  const [pattern, setPattern] = useState<Pattern>(() => (initial && initial.steps === steps ? initial : { steps, hits: {} }))
+  const [name, setName] = useState(initial?.name ?? '')
+  const [meter, setMeter] = useState<Meter>(initial?.meter ?? '4/4')
+  const [bpm, setBpm] = useState(initial?.bpm ?? 80)
+  const { beats, sub, steps } = gridFor(meter)
+  const [pattern, setPattern] = useState<Pattern>(() => initial?.pattern ?? { steps, hits: {} })
   const ref = useRef(pattern)
   ref.current = pattern
+  const bpmRef = useRef(bpm)
+  bpmRef.current = bpm
   const playing = usePlaying()
   const isPlaying = playing?.id === 'editor'
-  const tempo = bpm || 80
   const labels = countLabels(beats, sub)
+  const empty = !Object.keys(pattern.hits).length
 
+  const changeMeter = (m: Meter) => {
+    if (m === meter) return
+    if (!empty && !confirm('Al cambiar el compás se borra la cuadrícula. ¿Seguir?')) return
+    stopRhythm()
+    setMeter(m)
+    setPattern({ steps: gridFor(m).steps, hits: {} })
+  }
   const close = () => {
     stopRhythm()
     onClose()
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex flex-col bg-ink" role="dialog" aria-modal="true" aria-label={`Ritmo: ${title}`} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex flex-col bg-ink" role="dialog" aria-modal="true" aria-label="Ritmo" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">Ritmo · {feel || '4/4'}</p>
-          <p className="truncate font-semibold">{title}</p>
-        </div>
+        <p className="min-w-0 flex-1 truncate font-semibold">{initial?.name ? `Editar: ${initial.name}` : 'Nuevo ritmo'}</p>
         <button onClick={close} className="rounded-full p-2 text-slate-500 active:bg-black/5" aria-label="Cerrar">
           ✕
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-3 py-3">
+      <div className="flex-1 overflow-auto px-3 py-3 md:landscape:mx-auto md:landscape:w-full md:landscape:max-w-3xl">
         <label className="mb-3 flex items-center gap-2">
           <span className="text-sm font-medium text-slate-700">Nombre</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ritmo 1, Coro fuerte, Verso suave…"
+            placeholder="Balada suave, Coro fuerte, 6/8 lento…"
             className="min-w-0 flex-1 rounded-xl border border-line bg-white px-3 py-2 text-base outline-none focus:border-accent"
           />
         </label>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl bg-black/5 p-1 text-sm font-medium">
+            {METERS.map((m) => (
+              <button key={m} onClick={() => changeMeter(m)} className={`rounded-lg px-3 py-1 ${meter === m ? 'bg-white shadow-sm' : 'text-slate-600'}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center rounded-xl bg-panel">
+            <button onClick={() => setBpm(Math.max(40, bpm - 1))} className="px-3 py-1.5 text-lg" aria-label="Menos BPM">
+              −
+            </button>
+            <span className="min-w-14 text-center font-bold tabular-nums">{bpm}</span>
+            <button onClick={() => setBpm(Math.min(240, bpm + 1))} className="px-3 py-1.5 text-lg" aria-label="Más BPM">
+              +
+            </button>
+            <span className="pr-3 text-xs text-slate-500">BPM</span>
+          </div>
+        </div>
+        <input type="range" min={40} max={240} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="mb-3 w-full accent-[var(--color-accent)]" aria-label="BPM" />
+
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button
-            onClick={() => (isPlaying ? stopRhythm() : void playRhythm('editor', () => ref.current, tempo, sub))}
+            onClick={() => (isPlaying ? stopRhythm() : void playRhythm('editor', () => ref.current, () => bpmRef.current, sub))}
             className={`rounded-xl px-4 py-2 text-sm font-semibold ${isPlaying ? 'bg-amber-400 text-amber-950' : 'bg-accent text-white'}`}
           >
             {isPlaying ? '■ Detener' : '▶ Escuchar'}
           </button>
           <ClickToggle />
-          <span className="text-sm text-slate-500">
-            {tempo} BPM{!bpm && ' (la canción aún no tiene BPM)'}
-          </span>
         </div>
         <div className="mb-3 flex flex-wrap gap-1.5">
           <span className="self-center text-xs text-slate-500">Empezar con:</span>
@@ -136,12 +156,14 @@ export function RhythmEditor({
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Toca una casilla para poner o quitar un golpe. Se escucha sin reiniciar. En iPhone, quita el modo silencio para oírlo.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          Toca una casilla para poner o quitar un golpe; el BPM se puede mover mientras suena. En una canción, el ritmo suena al BPM de la canción. En iPhone, quita el modo silencio.
+        </p>
       </div>
 
       <div className="flex gap-2 border-t border-line px-4 py-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
         {onDelete && (
-          <Button variant="danger" onClick={() => confirm(`¿Eliminar "${name || 'este ritmo'}"?`) && (stopRhythm(), onDelete())}>
+          <Button variant="danger" onClick={() => confirm(`¿Eliminar "${name || 'este ritmo'}" de la biblioteca?`) && (stopRhythm(), void onDelete())}>
             Eliminar
           </Button>
         )}
@@ -150,11 +172,11 @@ export function RhythmEditor({
           Cancelar
         </Button>
         <Button
+          disabled={empty}
           onClick={() => {
             stopRhythm()
-            onSave(Object.keys(pattern.hits).length ? pattern : undefined, name.trim())
+            void onSave({ name: name.trim() || 'Ritmo', meter, bpm, pattern })
           }}
-          disabled={!Object.keys(pattern.hits).length}
         >
           Guardar ritmo
         </Button>
@@ -164,13 +186,13 @@ export function RhythmEditor({
   )
 }
 
-/** Botón ▶ para escuchar el ritmo de una sección. */
-export function RhythmPlay({ id, pattern, bpm, feel, label = 'Ritmo' }: { id: string; pattern: Pattern; bpm?: number; feel?: string; label?: string }) {
+/** Botón ▶ para escuchar un ritmo (en una canción, al BPM de la canción). */
+export function RhythmPlay({ id, pattern, bpm, meter, label = 'Ritmo' }: { id: string; pattern: Pattern; bpm?: number; meter?: Meter; label?: string }) {
   const playing = usePlaying()
   const on = playing?.id === id
   const ref = useRef(pattern)
   ref.current = pattern
-  const { sub } = gridFor(feel)
+  const { sub } = gridFor(meter)
   return (
     <button
       onClick={(e) => {

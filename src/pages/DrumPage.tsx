@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { blocksOf, parseChordPro } from '../lib/chordsheet'
-import { cleanDrums, drumsFor, rhythmOf, sectionKey, type DrumChart } from '../lib/drums'
-import { saveSong, useMe, useSong, useStore } from '../lib/store'
+import { cleanDrums, drumsFor, sectionKey, type DrumChart } from '../lib/drums'
+import { meterOf } from '../lib/rhythm'
+import { savePersonal, useMe, usePersonal, useRhythms, useSong, useStore } from '../lib/store'
 import type { Song } from '../types'
 import { DrumEditor } from '../components/DrumPanel'
 import { DynamicIcon, PartIcon } from '../components/DrumIcons'
 import { BigPulse } from '../components/Pulse'
 import { RhythmPlay } from '../components/RhythmEditor'
-import { RhythmLibrary } from '../components/RhythmLibrary'
 import { VoiceButton } from '../components/VoiceButton'
 import { ErrorBox, Header } from '../components/ui'
 
 /**
- * Pantalla del baterista: tempo grande, los ritmos de la canción y la letra
- * por secciones con el ▶ del ritmo elegido encima de cada una.
+ * Pantalla del baterista: tempo grande y la letra por secciones con el ▶
+ * del ritmo que cada quien eligió (de la biblioteca del equipo) encima.
  */
 export default function DrumPage() {
   const { id } = useParams()
@@ -53,29 +53,33 @@ export default function DrumPage() {
 }
 
 function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
-  // cleanDrums también pasa los ritmos antiguos (dentro de la sección) a la biblioteca
   const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
-  const rhythms = chart.rhythms ?? []
+  const library = useRhythms()
+  const mine = usePersonal(song.id)
+  const { roles } = useMe()
+  const canEdit = roles.includes('direccion') || roles.includes('bateria')
+  const songMeter = meterOf(chart.feel)
+  // Primero los ritmos del mismo compás de la canción
+  const options = useMemo(() => [...library].sort((a, b) => Number(b.meter === songMeter) - Number(a.meter === songMeter) || a.name.localeCompare(b.name)), [library, songMeter])
   const [error, setError] = useState<string | null>(null)
   const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
 
-  async function saveChart(next: DrumChart) {
+  /** Mi ritmo para una sección (guardado en mi cuenta, no lo ve el resto). */
+  async function chooseRhythm(sectionName: string, rhythmId: string) {
     setError(null)
+    const key = sectionKey(sectionName.replace(/\s*\d+$/, ''))
+    const rhythms = { ...(mine.rhythms ?? {}) }
+    if (rhythmId) rhythms[key] = rhythmId
+    else delete rhythms[key]
     try {
-      await saveSong({ ...song, drums: next }, song)
+      await savePersonal(song.id, { rhythms: Object.keys(rhythms).length ? rhythms : undefined })
     } catch (e) {
       setError((e as Error).message)
     }
   }
-
-  /** Elige el ritmo de una sección de la letra (crea su entrada si no existe). */
-  function chooseRhythm(sectionName: string, rhythmId: string | undefined) {
-    const current = drumsFor(chart, sectionName)
-    const base = sectionName.replace(/\s*\d+$/, '')
-    const sections = current
-      ? chart.sections.map((s) => (s === current ? { ...s, rhythm: rhythmId, pattern: undefined } : s))
-      : [...chart.sections, { name: sectionKey(base) === sectionKey(sectionName) ? sectionName : base, parts: [], rhythm: rhythmId }]
-    void saveChart({ ...chart, sections })
+  const assigned = (sectionName: string) => {
+    const id = mine.rhythms?.[sectionKey(sectionName.replace(/\s*\d+$/, ''))]
+    return id ? library.find((r) => r.id === id) : undefined
   }
 
   return (
@@ -83,7 +87,14 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
       <BigPulse bpm={song.bpm} feel={chart.feel} autoStart={autoPulse} />
       {chart.feel && <p className="-mt-2 px-1 text-sm text-slate-500">Feel: {chart.feel}</p>}
 
-      <RhythmLibrary song={song} />
+      <p className="-mt-1 flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-slate-500">
+        <span>Elige el ritmo de cada sección; suena a {song.bpm ?? 80} BPM y queda guardado para ti.</span>
+        {canEdit && (
+          <Link to="/ritmos" className="font-semibold text-accent">
+            Crear o editar ritmos →
+          </Link>
+        )}
+      </p>
       {error && <ErrorBox>{error}</ErrorBox>}
 
       {/* Letra por secciones con el ritmo elegido encima */}
@@ -102,7 +113,7 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
               const name = first?.type === 'section' ? first.name : undefined
               const lyrics = b.lines.flatMap((l) => (l.line.type === 'lyrics' ? [l.line.parts.map((p) => p.text).join('').trim()] : [])).filter(Boolean)
               const d = name ? drumsFor(chart, name) : undefined
-              const r = rhythmOf(chart, d)
+              const r = name ? assigned(name) : undefined
               return (
                 <div key={b.start} className="mb-3 break-inside-avoid rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
                   {name && (
@@ -119,18 +130,19 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
                         </span>
                       ))}
                       <span className="flex-1" />
-                      {r && <RhythmPlay id={`sec-${b.start}`} pattern={r.pattern} bpm={song.bpm} feel={chart.feel} label={r.name} />}
-                      {rhythms.length > 0 && (
+                      {r && <RhythmPlay id={`sec-${b.start}`} pattern={r.pattern} bpm={song.bpm ?? r.bpm} meter={r.meter} label={r.name} />}
+                      {options.length > 0 && (
                         <select
-                          value={d?.rhythm ?? ''}
-                          onChange={(e) => chooseRhythm(name, e.target.value || undefined)}
+                          value={r?.id ?? ''}
+                          onChange={(e) => void chooseRhythm(name, e.target.value)}
                           className="rounded-lg bg-black/5 px-1.5 py-0.5 text-xs text-slate-600"
                           aria-label={`Ritmo para ${name}`}
                         >
                           <option value="">{r ? 'Sin ritmo' : 'Elegir ritmo…'}</option>
-                          {rhythms.map((x) => (
+                          {options.map((x) => (
                             <option key={x.id} value={x.id}>
                               {x.name}
+                              {x.meter !== songMeter ? ` (${x.meter})` : ''}
                             </option>
                           ))}
                         </select>

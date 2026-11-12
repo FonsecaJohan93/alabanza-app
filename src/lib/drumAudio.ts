@@ -144,11 +144,11 @@ export function stopRhythm() {
 
 /** Toca el ritmo en bucle. `id` identifica qué botón lo inició. */
 /** `onlyClick`: solo la campana (metrónomo), sin batería. */
-export async function playRhythm(id: string, getPattern: () => Pattern, bpm: number, sub: number, onlyClick = false) {
+export async function playRhythm(id: string, getPattern: () => Pattern, bpm: number | (() => number), sub: number, onlyClick = false) {
+  const getBpm = typeof bpm === 'number' ? () => bpm : bpm
   stopRhythm()
   const c = audio()
   if (c.state === 'suspended') await c.resume() // los navegadores piden un toque del usuario
-  const dur = stepSeconds(bpm, sub)
   let step = 0
   let next = c.currentTime + 0.06
   playing = { id, step: -1 }
@@ -168,7 +168,7 @@ export async function playRhythm(id: string, getPattern: () => Pattern, bpm: num
           emit()
         }
       }, delay)
-      next += dur
+      next += stepSeconds(getBpm(), sub) // el BPM se lee en cada golpe: se puede cambiar mientras suena
       step = (step + 1) % getPattern().steps
     }
   }

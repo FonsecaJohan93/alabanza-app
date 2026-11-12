@@ -13,6 +13,8 @@ export const songs = () => getStore({ name: 'songs', consistency: 'strong' })
 export const services = () => getStore({ name: 'services', consistency: 'strong' })
 /** Datos personales de cada persona por canción (capo, notas): uno por usuario. */
 export const personal = () => getStore({ name: 'personal', consistency: 'strong' })
+/** Biblioteca de ritmos del equipo (un solo documento). */
+export const rhythmsStore = () => getStore({ name: 'rhythms', consistency: 'strong' })
 
 export interface UserRecord {
   username: string

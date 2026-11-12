@@ -289,3 +289,15 @@ test('biblioteca de ritmos y paso de los ritmos viejos', async () => {
   assert.equal(b.sections[0].rhythm, 'abc')
   assert.equal(b.sections[1].rhythm, undefined)
 })
+
+test('biblioteca de ritmos del equipo y asignación personal', async () => {
+  const { cleanLibraryRhythm, meterOf } = await import('./rhythm.ts')
+  const { cleanPersonalSong } = await import('./personal.ts')
+  assert.deepEqual(cleanLibraryRhythm({ name: ' Pop ', meter: '4/4', bpm: 300, pattern: { steps: 16, hits: { bombo: [0] } } }), {
+    name: 'Pop', meter: '4/4', bpm: 80, pattern: { steps: 16, hits: { bombo: [0] } },
+  })
+  assert.equal(cleanLibraryRhythm({ meter: '6/8', pattern: { steps: 16, hits: { bombo: [0] } } }), 'El ritmo no corresponde al compás')
+  assert.equal(meterOf('6/8'), '6/8')
+  assert.equal(meterOf('Balada 4/4'), '4/4')
+  assert.deepEqual(cleanPersonalSong({ rhythms: { coro: 'ab12', 'MALO!': 'x', verso: '<x>' } }).rhythms, { coro: 'ab12' })
+})

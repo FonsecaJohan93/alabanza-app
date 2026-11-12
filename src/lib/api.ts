@@ -1,6 +1,7 @@
 import type { Service, ServiceItem, Song, SongDraft } from '../types'
 import type { ImportedSong, SearchResult } from './importers'
 import type { Personal, PersonalSong } from './personal'
+import type { LibraryRhythm } from './rhythm'
 import type { Assignment, Member, Prefs, Role } from './team'
 
 export interface Session {
@@ -98,3 +99,9 @@ export const savePersonalSong = (songId: string, data: PersonalSong) =>
   call<{ song: PersonalSong }>(`/api/personal/${songId}`, { method: 'PUT', body: JSON.stringify(data) }).then((r) => r.song)
 
 export const fetchServices = () => call<{ services: Service[] }>('/api/services').then((r) => r.services)
+
+export type RhythmDraft = Pick<LibraryRhythm, 'name' | 'meter' | 'bpm' | 'pattern'>
+export const fetchRhythms = () => call<{ rhythms: LibraryRhythm[] }>('/api/rhythms').then((r) => r.rhythms)
+export const saveRhythmApi = (draft: RhythmDraft, id?: string) =>
+  call<{ rhythm: LibraryRhythm }>(id ? `/api/rhythms/${id}` : '/api/rhythms', { method: id ? 'PUT' : 'POST', body: JSON.stringify(draft) }).then((r) => r.rhythm)
+export const deleteRhythmApi = (id: string) => call<void>(`/api/rhythms/${id}`, { method: 'DELETE' })

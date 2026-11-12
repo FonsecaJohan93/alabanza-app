@@ -16,7 +16,7 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'PUT' && songId && /^[a-f0-9]{16}$/.test(songId)) {
     const data = cleanPersonalSong(await req.json().catch(() => ({})))
     const next: Personal = { ...mine }
-    if (!data.capo && !data.notes) delete next[songId]
+    if (!data.capo && !data.notes && !data.rhythms) delete next[songId]
     else next[songId] = { ...data, updatedAt: new Date().toISOString() }
     await store.setJSON(username, next)
     return json({ song: next[songId] ?? {} })
