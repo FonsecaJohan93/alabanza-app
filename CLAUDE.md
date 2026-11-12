@@ -29,8 +29,9 @@ React 19 + TS + Vite + Tailwind v4 + vite-plugin-pwa. Backend: Netlify Functions
 - El usuario **prefiere Cifra Club** como fuente de acordes. Se leen abriendo la página en el navegador integrado (visita normal); nunca con curl/headers falsos.
 
 ## Publicación
-- El repositorio es **público** a propósito (el plan gratis de Netlify bloqueaba builds de repos privados en gym-app). Aviso de derechos reservados en `LICENSE`. Nunca subir secretos ni las canciones: `AUTH_SECRET` e `INVITE_CODE` viven solo en Netlify; `scripts/seed/` y `.env` están en .gitignore.
-- Deploy automático en Netlify al hacer push a `main`.
+- **Producción:** https://alabanza-mirefugio.netlify.app (sitio Netlify `alabanza-mirefugio`, carpeta vinculada). Env en Netlify: `AUTH_SECRET` (secreto; copia local en `.env` como `PROD_AUTH_SECRET`), `INVITE_CODE` = `mirefugio`.
+- **Deploy:** manual con `netlify deploy --prod --build`. Todavía NO hay repo en GitHub: el usuario no ha decidido si público (como gym-app, necesario en el plan gratis para deploy automático) o privado. Git es solo local. Nunca subir secretos ni las canciones (`scripts/seed/` y `.env` están en .gitignore).
+- Cargar datos en producción: `set -a; source .env; set +a; SEED_SECRET=$PROD_AUTH_SECRET node scripts/seed.ts https://alabanza-mirefugio.netlify.app` (firma un token como "repertorio", sin cuenta).
 
 ## Local
 `netlify dev --offline` (launch config `alabanza-app` en la carpeta padre) → abrir Vite en :5176 (proxy /api → :8889). `.env` (gitignored) tiene secretos locales y la cuenta de prueba. Tests: `npm test` (node --test). Con `LACUERDA_SAMPLE=<html>` prueba también una página real.
