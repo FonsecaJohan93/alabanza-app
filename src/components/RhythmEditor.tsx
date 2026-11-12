@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DRUM_PARTS } from '../lib/drums'
 import { countLabels, gridFor, hasHit, presets, toggleHit, type Pattern } from '../lib/rhythm'
-import { playRhythm, stopRhythm, usePlaying } from '../lib/drumAudio'
+import { playRhythm, setClickOn, stopRhythm, useClickOn, usePlaying } from '../lib/drumAudio'
 import { PartIcon } from './DrumIcons'
 import { Button } from './ui'
 
@@ -74,6 +74,7 @@ export function RhythmEditor({
           >
             {isPlaying ? '■ Detener' : '▶ Escuchar'}
           </button>
+          <ClickToggle />
           <span className="text-sm text-slate-500">
             {tempo} BPM{!bpm && ' (la canción aún no tiene BPM)'}
           </span>
@@ -182,6 +183,24 @@ export function RhythmPlay({ id, pattern, bpm, feel, label = 'Ritmo' }: { id: st
       aria-label={on ? `Detener ${label}` : `Escuchar ${label}`}
     >
       {on ? '■' : '▶'} {label}
+    </button>
+  )
+}
+
+/** 🔔 Campana del metrónomo: encendida suma el clic; apagada, batería pura. */
+export function ClickToggle({ className = '' }: { className?: string }) {
+  const on = useClickOn()
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setClickOn(!on)
+      }}
+      className={`rounded-xl px-3 py-2 text-sm font-semibold ${on ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' : 'bg-panel text-slate-500'} ${className}`}
+      aria-pressed={on}
+      title={on ? 'Se oye la campana del metrónomo' : 'Solo batería, sin campana'}
+    >
+      🔔 {on ? 'Campana' : 'Sin campana'}
     </button>
   )
 }

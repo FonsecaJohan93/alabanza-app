@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { blocksOf, parseChordPro } from '../lib/chordsheet'
-import { cleanDrums, drumsFor, newRhythmId, rhythmOf, sectionKey, type DrumChart, type Rhythm } from '../lib/drums'
+import { cleanDrums, drumsFor, rhythmOf, sectionKey, type DrumChart } from '../lib/drums'
 import { saveSong, useMe, useSong, useStore } from '../lib/store'
 import type { Song } from '../types'
 import { DrumEditor } from '../components/DrumPanel'
 import { DynamicIcon, PartIcon } from '../components/DrumIcons'
 import { BigPulse } from '../components/Pulse'
-import { RhythmEditor, RhythmPlay } from '../components/RhythmEditor'
+import { RhythmPlay } from '../components/RhythmEditor'
+import { RhythmLibrary } from '../components/RhythmLibrary'
 import { VoiceButton } from '../components/VoiceButton'
 import { ErrorBox, Header } from '../components/ui'
 
@@ -55,7 +56,6 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
   // cleanDrums también pasa los ritmos antiguos (dentro de la sección) a la biblioteca
   const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
   const rhythms = chart.rhythms ?? []
-  const [editingRhythm, setEditingRhythm] = useState<Rhythm | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
 
@@ -83,29 +83,7 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
       <BigPulse bpm={song.bpm} feel={chart.feel} autoStart={autoPulse} />
       {chart.feel && <p className="-mt-2 px-1 text-sm text-slate-500">Feel: {chart.feel}</p>}
 
-      {/* Biblioteca de ritmos de la canción */}
-      <section className="rounded-2xl bg-panel p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-semibold">Ritmos de esta canción</h2>
-          <button onClick={() => setEditingRhythm('new')} className="rounded-full bg-accent px-3 py-1 text-sm font-semibold text-white">
-            + Crear ritmo
-          </button>
-        </div>
-        {rhythms.length ? (
-          <ul className="flex flex-wrap gap-2">
-            {rhythms.map((r) => (
-              <li key={r.id} className="flex items-center gap-1 rounded-full bg-black/[0.04] py-1 pr-1 pl-1">
-                <RhythmPlay id={`lib-${r.id}`} pattern={r.pattern} bpm={song.bpm} feel={chart.feel} label={r.name} />
-                <button onClick={() => setEditingRhythm(r)} className="rounded-full px-2 py-0.5 text-sm text-slate-500 active:bg-black/5" aria-label={`Editar ${r.name}`}>
-                  ✎
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-slate-500">Crea los ritmos de la canción (por ejemplo uno para el verso y otro para el coro) y luego elige cuál suena en cada sección.</p>
-        )}
-      </section>
+      <RhythmLibrary song={song} />
       {error && <ErrorBox>{error}</ErrorBox>}
 
       {/* Letra por secciones con el ritmo elegido encima */}
@@ -177,38 +155,6 @@ function Board({ song, autoPulse }: { song: Song; autoPulse: boolean }) {
         )}
       </section>
 
-      {editingRhythm && (
-        <RhythmEditor
-          title={song.title}
-          feel={chart.feel}
-          bpm={song.bpm}
-          initial={editingRhythm === 'new' ? undefined : editingRhythm.pattern}
-          initialName={editingRhythm === 'new' ? `Ritmo ${rhythms.length + 1}` : editingRhythm.name}
-          onSave={(pattern, name) => {
-            if (!pattern) return setEditingRhythm(null)
-            const list =
-              editingRhythm === 'new'
-                ? [...rhythms, { id: newRhythmId(), name: name || `Ritmo ${rhythms.length + 1}`, pattern }]
-                : rhythms.map((x) => (x.id === editingRhythm.id ? { ...x, name: name || x.name, pattern } : x))
-            void saveChart({ ...chart, rhythms: list })
-            setEditingRhythm(null)
-          }}
-          onDelete={
-            editingRhythm === 'new'
-              ? undefined
-              : () => {
-                  const gone = editingRhythm.id
-                  void saveChart({
-                    ...chart,
-                    rhythms: rhythms.filter((x) => x.id !== gone),
-                    sections: chart.sections.map((s) => (s.rhythm === gone ? { ...s, rhythm: undefined } : s)),
-                  })
-                  setEditingRhythm(null)
-                }
-          }
-          onClose={() => setEditingRhythm(null)}
-        />
-      )}
     </div>
   )
 }

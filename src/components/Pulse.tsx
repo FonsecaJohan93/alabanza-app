@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { beatAt, beatsPerBar } from '../lib/pulse'
+import { playRhythm, stopRhythm, useClickOn, usePlaying } from '../lib/drumAudio'
+import { ClickToggle } from './RhythmEditor'
 
 // Pulso visual (metrónomo sin sonido). El tiempo se calcula siempre desde el
 // reloj del navegador (performance.now), no contando cuadros: así no se
@@ -131,9 +133,17 @@ export function BigPulse({ bpm, feel, autoStart = false }: { bpm?: number; feel?
   }, [autoStart, bpm])
   const beats = beatsPerBar(feel)
   const beat = usePulse(bpm ?? 0, on && !!bpm)
+  // Con la campana encendida, el pulso también suena (metrónomo)
+  const click = useClickOn()
+  const playing = usePlaying()
+  const pulseSounding = playing?.id === 'pulse'
+  useEffect(() => {
+    if (on && click && bpm && !playing) void playRhythm('pulse', () => ({ steps: beats, hits: {} }), bpm, 1, true)
+    if ((!on || !click) && pulseSounding) stopRhythm()
+  }, [on, click, bpm, beats, playing, pulseSounding])
   const inBar = beat < 0 ? -1 : beat % beats
   return (
-    <section className="flex items-center gap-4 rounded-2xl bg-panel p-4" aria-label="Tempo">
+    <section className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-panel p-4" aria-label="Tempo">
       <button
         onClick={() => bpm && setOn(!on)}
         disabled={!bpm}
@@ -146,6 +156,7 @@ export function BigPulse({ bpm, feel, autoStart = false }: { bpm?: number; feel?
         <div className="text-5xl font-black tabular-nums">{bpm ?? '—'}</div>
         <div className="mt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">{bpm ? 'BPM' : 'Sin BPM'}</div>
       </div>
+      <ClickToggle className="shrink-0 px-2" />
       <div className="flex flex-1 flex-wrap justify-end gap-2">
         {Array.from({ length: beats }, (_, i) => (
           <span

@@ -92,6 +92,38 @@ export function hit(part: DrumPart, t: number, accent = false) {
   }
 }
 
+/** Campana del metrónomo: más aguda y fuerte en el 1 del compás. */
+export function bell(t: number, accent: boolean) {
+  tone(t, 'sine', accent ? 2000 : 1500, accent ? 2000 : 1500, 0.01, accent ? 0.6 : 0.35, 0.12)
+  tone(t, 'sine', accent ? 4000 : 3000, accent ? 4000 : 3000, 0.01, 0.08, 0.06)
+}
+
+// ---- Campana encendida o apagada (preferencia del teléfono)
+
+const CLICK_KEY = 'alabanza:click'
+let clickOn = (() => {
+  try {
+    return localStorage.getItem(CLICK_KEY) === '1'
+  } catch {
+    return false
+  }
+})()
+const clickListeners = new Set<() => void>()
+export function setClickOn(v: boolean) {
+  clickOn = v
+  try {
+    localStorage.setItem(CLICK_KEY, v ? '1' : '0')
+  } catch {
+    /* nada */
+  }
+  clickListeners.forEach((l) => l())
+}
+export const useClickOn = () =>
+  useSyncExternalStore(
+    (l) => (clickListeners.add(l), () => clickListeners.delete(l)),
+    () => clickOn,
+  )
+
 // ---- Un solo ritmo sonando a la vez en toda la app
 
 interface Playing {
@@ -111,7 +143,8 @@ export function stopRhythm() {
 }
 
 /** Toca el ritmo en bucle. `id` identifica qué botón lo inició. */
-export async function playRhythm(id: string, getPattern: () => Pattern, bpm: number, sub: number) {
+/** `onlyClick`: solo la campana (metrónomo), sin batería. */
+export async function playRhythm(id: string, getPattern: () => Pattern, bpm: number, sub: number, onlyClick = false) {
   stopRhythm()
   const c = audio()
   if (c.state === 'suspended') await c.resume() // los navegadores piden un toque del usuario
@@ -125,6 +158,8 @@ export async function playRhythm(id: string, getPattern: () => Pattern, bpm: num
       // Se lee el ritmo en cada golpe: los cambios se oyen sin reiniciar
       const pattern = getPattern()
       for (const [part, steps] of Object.entries(pattern.hits)) if (steps?.includes(step)) hit(part as DrumPart, next, step === 0)
+      // Campana en cada tiempo (si está encendida): con ella se cuenta; sin ella, batería pura
+      if ((clickOn || onlyClick) && step % sub === 0) bell(next, step === 0)
       const s = step
       const delay = Math.max(0, (next - c.currentTime) * 1000)
       window.setTimeout(() => {
