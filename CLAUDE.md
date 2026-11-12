@@ -9,6 +9,8 @@ React 19 + TS + Vite + Tailwind v4 + vite-plugin-pwa. Backend: Netlify Functions
 - `netlify/functions/auth.mts` — `/api/register`, `/api/login`.
 - `netlify/functions/songs.mts` — `/api/songs[/:id]`. Repertorio **compartido** por todo el equipo, un blob por canción en el store `songs`. Borrar = `deleted: true`. PUT con `baseUpdatedAt` → 409 si otra persona la cambió.
 - `netlify/functions/import.mts` — `/api/import`: lee links de LaCuerda.
+- `netlify/functions/services.mts` — `/api/services/:date` (AAAA-MM-DD): lista de canciones de cada domingo, compartida (store `services`), con bloques opcionales (Alabanza, Adoración…). Cliente en `src/lib/service.ts`.
+- Navegación: panel lateral (`src/components/Menu.tsx`). Inicio (`/`) saluda y muestra solo las canciones del domingo próximo (hoy si es domingo); el repertorio está en `/repertorio`; la lista se edita en `/servicio/:date`.
 - `src/lib/chordsheet.ts` — lógica pura de acordes: detectar líneas de acordes, "acordes arriba" ⇄ ChordPro, transponer, capo, secciones. Lo usan cliente y funciones.
 - `src/lib/importers.ts` — parser de LaCuerda (acordes en `<A>` dentro de `<div id=t_body><PRE>`; título/artista en vars JS `orola`/`oband`).
 

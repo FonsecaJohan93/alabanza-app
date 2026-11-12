@@ -1,4 +1,4 @@
-import type { Song, SongDraft } from '../types'
+import type { Service, ServiceItem, Song, SongDraft } from '../types'
 import type { ImportedSong } from './importers'
 
 export interface Session {
@@ -74,3 +74,11 @@ export const updateSong = (id: string, draft: SongDraft, baseUpdatedAt: string) 
 export const deleteSong = (id: string) => call<void>(`/api/songs/${id}`, { method: 'DELETE' })
 
 export const importFromUrl = (url: string) => call<{ song: ImportedSong }>('/api/import', post({ url })).then((r) => r.song)
+
+export const fetchService = (date: string) =>
+  call<{ service: Service | null }>(`/api/services/${date}`).then((r) => r.service)
+
+export const saveService = (date: string, items: ServiceItem[], baseUpdatedAt?: string) =>
+  call<{ service: Service }>(`/api/services/${date}`, { method: 'PUT', body: JSON.stringify({ items, baseUpdatedAt }) }).then(
+    (r) => r.service,
+  )

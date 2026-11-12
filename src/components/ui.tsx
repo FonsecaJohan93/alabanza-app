@@ -1,15 +1,27 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { MenuButton } from './Menu'
 
+/**
+ * Encabezado de cada pantalla. Sin `back` muestra el botón del menú; con
+ * `back`, la flecha vuelve a la pantalla anterior (o a `back` si se entró
+ * directo por un link).
+ */
 export function Header({ title, back, actions }: { title: ReactNode; back?: string; actions?: ReactNode }) {
+  const navigate = useNavigate()
+  const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(back ?? '/', { replace: true }))
   return (
     <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
-      {back && (
-        <Link to={back} aria-label="Volver" className="-ml-2 rounded-full p-2 text-slate-600 active:bg-black/5">
+      {back ? (
+        <button onClick={goBack} aria-label="Volver" className="-my-1 -ml-2 rounded-full p-2 text-slate-600 active:bg-black/5">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12.5 4 6.5 10l6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </Link>
+        </button>
+      ) : (
+        <div className="-my-1.5">
+          <MenuButton />
+        </div>
       )}
       <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h1>
       {actions}

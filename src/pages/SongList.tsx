@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { lyricsOnly } from '../lib/chordsheet'
-import { refreshSongs, signOut, useSession, useSongs, useStore } from '../lib/store'
+import { refreshSongs, useSongs, useStore } from '../lib/store'
 import { ErrorBox, Header, TEMPO_LABEL } from '../components/ui'
 
 const fold = (s: string) =>
@@ -12,7 +12,6 @@ const fold = (s: string) =>
 
 export default function SongList() {
   const songs = useSongs()
-  const session = useSession()
   const loaded = useStore((s) => s.loaded)
   const error = useStore((s) => s.error)
   const [q, setQ] = useState('')
@@ -36,14 +35,7 @@ export default function SongList() {
 
   return (
     <div className="pb-24">
-      <Header
-        title="Repertorio"
-        actions={
-          <button onClick={signOut} className="rounded-lg px-2 py-1 text-sm text-slate-500 active:bg-black/5" title={`Sesión de ${session?.name}`}>
-            Salir
-          </button>
-        }
-      />
+      <Header title="Repertorio" />
       <div className="space-y-3 px-4 pt-3">
         <input
           type="search"

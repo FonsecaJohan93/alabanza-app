@@ -65,7 +65,7 @@ export default function NewSong() {
 
   return (
     <div className="pb-10">
-      <Header title="Agregar canción" back="/" />
+      <Header title="Agregar canción" back="/repertorio" />
       <div className="space-y-6 px-4 pt-4">
         <form onSubmit={importLink} className="space-y-3 rounded-2xl bg-panel p-4">
           <h2 className="font-semibold">Desde un link</h2>

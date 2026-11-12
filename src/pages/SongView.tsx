@@ -39,7 +39,7 @@ export default function SongView() {
   if (!song)
     return (
       <div>
-        <Header title="Canción" back="/" />
+        <Header title="Canción" back="/repertorio" />
         <p className="p-8 text-center text-slate-500">{loaded ? 'Esa canción no existe o fue borrada.' : 'Cargando…'}</p>
       </div>
     )
@@ -52,7 +52,7 @@ export default function SongView() {
     <div className="pb-16">
       <Header
         title={song.title}
-        back="/"
+        back="/repertorio"
         actions={
           <Link to={`/cancion/${song.id}/editar`} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft">
             Editar

@@ -86,7 +86,7 @@ function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) 
     if (!existing || !confirm(`¿Borrar “${existing.title}” del repertorio?`)) return
     try {
       await removeSong(existing.id)
-      navigate('/', { replace: true })
+      navigate('/repertorio', { replace: true })
     } catch (e) {
       setError((e as Error).message)
     }
