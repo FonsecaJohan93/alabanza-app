@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { blocksOf, insertCue, parseChordPro, removeLine, type SheetBlock } from '../lib/chordsheet'
-import { saveSong, useSong, useStore } from '../lib/store'
+import { saveSong, useMe, useSong, useStore } from '../lib/store'
 import { CUE_PRESETS, CuePill } from '../components/Cue'
 import { ErrorBox, Header } from '../components/ui'
 import { PulseButton } from '../components/Pulse'
@@ -50,6 +50,7 @@ const lyricText = (b: SheetBlock) =>
 export default function VocalView() {
   const { id } = useParams()
   const song = useSong(id)
+  const { prefs } = useMe()
   const loaded = useStore((s) => s.loaded)
   const [fontSize, setFontSize] = usePref('alabanza:vocalFont', 26)
   const [editing, setEditing] = useState(false)
@@ -105,7 +106,7 @@ export default function VocalView() {
         back={`/cancion/${song.id}`}
         actions={
           <>
-            <PulseButton bpm={song.bpm} feel={song.drums?.feel} className="py-1.5" />
+            <PulseButton bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} className="py-1.5" />
             <div className="flex rounded-xl bg-panel text-sm">
               <button onClick={() => setFontSize(Math.max(18, fontSize - 3))} className="px-2 py-1.5" aria-label="Letra más pequeña">
                 A−

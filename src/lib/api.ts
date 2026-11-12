@@ -1,6 +1,6 @@
 import type { Service, ServiceItem, Song, SongDraft } from '../types'
 import type { ImportedSong } from './importers'
-import type { Assignment, Member, Role } from './team'
+import type { Assignment, Member, Prefs, Role } from './team'
 
 export interface Session {
   username: string
@@ -86,5 +86,5 @@ export const saveService = (date: string, items: ServiceItem[], team: Assignment
 
 export const fetchMembers = () => call<{ members: Member[] }>('/api/users').then((r) => r.members)
 
-export const saveProfile = (name: string, roles: Role[]) =>
-  call<{ member: Member }>('/api/users/me', { method: 'PUT', body: JSON.stringify({ name, roles }) }).then((r) => r.member)
+export const saveProfile = (name: string, roles: Role[] | undefined, prefs?: Prefs) =>
+  call<{ member: Member }>('/api/users/me', { method: 'PUT', body: JSON.stringify({ name, roles, prefs }) }).then((r) => r.member)

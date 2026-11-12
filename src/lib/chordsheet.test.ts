@@ -145,3 +145,15 @@ test('pulso: golpe correcto en el tiempo', async () => {
   assert.equal(beatsPerBar('6/8'), 6)
   assert.equal(beatsPerBar('Balada 4/4'), 4)
 })
+
+test('vistas según instrumentos', async () => {
+  const { viewsFor } = await import('./team.ts')
+  assert.deepEqual(viewsFor(['acustica']), { chords: true, lyrics: false, drums: false, primary: 'hoja' })
+  assert.deepEqual(viewsFor(['bateria']), { chords: false, lyrics: false, drums: true, primary: 'bateria' })
+  assert.deepEqual(viewsFor(['voz']), { chords: false, lyrics: true, drums: false, primary: 'voces' })
+  assert.equal(viewsFor(['direccion', 'voz']).drums, true)
+  assert.equal(viewsFor([]).chords, true) // sin instrumentos: todo
+  const mix = viewsFor(['voz', 'electrica'])
+  assert.ok(mix.chords && mix.lyrics && !mix.drums)
+  assert.equal(viewsFor(['acustica'], 'letra').primary, 'voces') // la elección manual manda
+})

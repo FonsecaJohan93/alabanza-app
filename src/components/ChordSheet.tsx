@@ -48,6 +48,7 @@ export function ChordSheet({
   fontSize = 17,
   drums,
   columns = false,
+  drumIcons,
 }: {
   content: string
   semitones?: number
@@ -57,6 +58,8 @@ export function ChordSheet({
   drums?: DrumChart
   /** En tablet horizontal, columnas que se pasan deslizando. */
   columns?: boolean
+  /** Mostrar los iconos de batería en las secciones (por defecto, solo con acordes). */
+  drumIcons?: boolean
 }) {
   const lines = useMemo(() => parseChordPro(content), [content])
   const blocks = useMemo(() => blocksOf(lines), [lines])
@@ -69,7 +72,7 @@ export function ChordSheet({
       case 'cue':
         return <CuePill key={i} text={line.text} />
       case 'section': {
-        const d = showChords ? drumsFor(drums, line.name) : undefined
+        const d = (drumIcons ?? showChords) ? drumsFor(drums, line.name) : undefined
         return (
           <div key={i} className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">{line.name}</span>

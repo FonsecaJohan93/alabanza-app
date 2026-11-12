@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { lyricsOnly } from '../lib/chordsheet'
-import { refreshSongs, useSongs, useStore } from '../lib/store'
+import { refreshSongs, useMe, useSongs, useStore } from '../lib/store'
+import { songPath } from '../lib/team'
 import { DrumButton } from '../components/DrumButton'
 import { VoiceButton } from '../components/VoiceButton'
 import { ErrorBox, Header, TEMPO_LABEL } from '../components/ui'
@@ -10,6 +11,7 @@ const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 
 export default function SongList() {
   const songs = useSongs()
+  const { views } = useMe()
   const loaded = useStore((s) => s.loaded)
   const error = useStore((s) => s.error)
   const [q, setQ] = useState('')
@@ -77,7 +79,7 @@ export default function SongList() {
             <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-panel">
               {shown.map((s) => (
                 <li key={s.id}>
-                  <Link to={`/cancion/${s.id}`} className="flex items-center gap-3 px-4 py-3 active:bg-slate-50">
+                  <Link to={songPath(s.id, views)} className="flex items-center gap-3 px-4 py-3 active:bg-slate-50">
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{s.title}</p>
                       <p className="truncate text-sm text-slate-500">
@@ -85,8 +87,8 @@ export default function SongList() {
                       </p>
                     </div>
                     {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{s.key}</span>}
-                    <VoiceButton song={s} />
-                    <DrumButton song={s} />
+                    {views.lyrics && views.primary !== 'voces' && <VoiceButton song={s} />}
+                    {views.drums && views.primary !== 'bateria' && <DrumButton song={s} />}
                   </Link>
                 </li>
               ))}

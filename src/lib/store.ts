@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type { Song, SongDraft } from '../types'
 import * as api from './api'
-import type { Member, Role } from './team'
+import { viewsFor, type Member, type Prefs, type Role, type Views } from './team'
 
 // Estado global pequeño: la sesión y el repertorio del equipo. El repertorio
 // se guarda también en el teléfono para poder ver canciones sin señal.
@@ -32,8 +32,24 @@ function writeCache(songs: Song[]) {
   }
 }
 
+const MEMBERS_KEY = 'alabanza:members'
+function readMembers(): Member[] {
+  try {
+    return JSON.parse(localStorage.getItem(MEMBERS_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+function writeMembers(m: Member[]) {
+  try {
+    localStorage.setItem(MEMBERS_KEY, JSON.stringify(m))
+  } catch {
+    /* nada */
+  }
+}
+
 const session = api.loadSession()
-let state: State = { session, songs: session ? readCache() : [], members: [], loaded: false, error: null }
+let state: State = { session, songs: session ? readCache() : [], members: session ? readMembers() : [], loaded: false, error: null }
 const listeners = new Set<() => void>()
 
 function set(patch: Partial<State>) {
@@ -53,6 +69,13 @@ export function useStore<T>(pick: (s: State) => T): T {
 export const useSession = () => useStore((s) => s.session)
 export const useSongs = () => useStore((s) => s.songs)
 export const useMembers = () => useStore((s) => s.members)
+/** Mis preferencias y lo que veo según mis instrumentos. */
+export function useMe(): { prefs: Prefs; roles: Role[]; views: Views; loaded: boolean } {
+  const me = useStore((s) => s.members.find((m) => m.username === s.session?.username))
+  const prefs = me?.prefs ?? {}
+  const roles = me?.roles ?? []
+  return { prefs, roles, views: viewsFor(roles, prefs.view), loaded: !!me }
+}
 export const useSong = (id: string | undefined) => useStore((s) => s.songs.find((x) => x.id === id))
 
 function sorted(songs: Song[]) {
@@ -76,6 +99,7 @@ export function signOut() {
   api.saveSession(null)
   try {
     localStorage.removeItem(CACHE_KEY)
+    localStorage.removeItem(MEMBERS_KEY)
   } catch {
     /* nada */
   }
@@ -112,21 +136,25 @@ export async function removeSong(id: string) {
 
 export async function refreshMembers() {
   try {
-    set({ members: await api.fetchMembers() })
+    const members = await api.fetchMembers()
+    writeMembers(members)
+    set({ members })
   } catch {
     /* sin señal: se queda la lista anterior */
   }
 }
 
 /** Cambia el nombre y los instrumentos propios. */
-export async function saveProfile(name: string, roles: Role[]) {
-  const me = await api.saveProfile(name, roles)
+export async function saveProfile(name: string, roles: Role[] | undefined, prefs?: Prefs) {
+  const me = await api.saveProfile(name, roles, prefs)
   if (state.session) {
     const session = { ...state.session, name: me.name }
     api.saveSession(session)
     set({ session })
   }
-  set({ members: state.members.map((m) => (m.username === me.username ? me : m)) })
+  const members = state.members.map((m) => (m.username === me.username ? me : m))
+  writeMembers(members)
+  set({ members })
 }
 
 if (session) {

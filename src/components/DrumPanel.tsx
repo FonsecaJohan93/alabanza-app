@@ -52,7 +52,7 @@ export function DrumPanel({ song, onClose }: { song: Song; onClose: () => void }
   )
 }
 
-function DrumView({ song, onEdit }: { song: Song; onEdit: () => void }) {
+export function DrumView({ song, onEdit }: { song: Song; onEdit: () => void }) {
   const chart = song.drums
   return (
     <div className="overflow-y-auto px-5 py-4">
@@ -126,7 +126,7 @@ function useTapTempo(onBpm: (bpm: number) => void) {
   }
 }
 
-function DrumEditor({ song, onDone }: { song: Song; onDone: () => void }) {
+export function DrumEditor({ song, onDone }: { song: Song; onDone: () => void }) {
   const [bpm, setBpm] = useState<number | undefined>(song.bpm)
   const [chart, setChart] = useState<DrumChart>(() => song.drums ?? chartFromSong(song.content))
   const [busy, setBusy] = useState(false)

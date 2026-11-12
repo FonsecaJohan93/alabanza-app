@@ -89,8 +89,12 @@ function PulseBar({ bpm, beats, onStop }: { bpm: number; beats: number; onStop: 
 }
 
 /** Botón ♩ que enciende el pulso visual de la canción. */
-export function PulseButton({ bpm, feel, className = '' }: { bpm?: number; feel?: string; className?: string }) {
-  const [on, setOn] = useState(false)
+export function PulseButton({ bpm, feel, className = '', autoStart = false }: { bpm?: number; feel?: string; className?: string; autoStart?: boolean }) {
+  // Con "pulso al abrir una canción" arranca encendido
+  const [on, setOn] = useState(autoStart)
+  useEffect(() => {
+    if (autoStart) setOn(true)
+  }, [autoStart, bpm])
   const btn = useRef<HTMLButtonElement>(null)
   if (!bpm)
     return (

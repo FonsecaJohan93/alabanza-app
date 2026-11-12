@@ -32,6 +32,7 @@ export interface Member {
   name: string
   /** Lo que la persona sabe tocar o hacer. */
   roles: Role[]
+  prefs?: Prefs
 }
 
 export function cleanAssignments(v: unknown): Assignment[] {
@@ -49,3 +50,62 @@ export function cleanAssignments(v: unknown): Assignment[] {
   }
   return out
 }
+
+// ---- Qué ve cada persona al abrir una canción
+
+export type ViewMode = 'auto' | 'acordes' | 'letra' | 'bateria' | 'todo'
+
+export const VIEW_MODES: { id: ViewMode; label: string; hint: string }[] = [
+  { id: 'auto', label: 'Según mis instrumentos', hint: 'Lo que marcaste en Equipo' },
+  { id: 'acordes', label: 'Acordes', hint: 'La hoja con acordes' },
+  { id: 'letra', label: 'Solo letra', hint: 'Letra grande, para cantar' },
+  { id: 'bateria', label: 'Batería', hint: 'Pulso, feel y piezas por sección' },
+  { id: 'todo', label: 'Todo', hint: 'Acordes, letra y batería' },
+]
+
+export interface Prefs {
+  /** Encender el pulso visual apenas se abre una canción. */
+  autoPulse?: boolean
+  view?: ViewMode
+}
+
+export function cleanPrefs(v: unknown, prev: Prefs = {}): Prefs {
+  if (!v || typeof v !== 'object') return prev
+  const o = v as Record<string, unknown>
+  return {
+    autoPulse: typeof o.autoPulse === 'boolean' ? o.autoPulse : prev.autoPulse,
+    view: VIEW_MODES.some((m) => m.id === o.view) ? (o.view as ViewMode) : prev.view,
+  }
+}
+
+export interface Views {
+  chords: boolean
+  lyrics: boolean
+  drums: boolean
+  /** Pantalla que se abre al tocar una canción. */
+  primary: 'hoja' | 'voces' | 'bateria'
+}
+
+const CHORD_ROLES: Role[] = ['acustica', 'electrica', 'bajo', 'teclado', 'otro']
+const LYRIC_ROLES: Role[] = ['voz', 'multimedia', 'sonido']
+
+const ALL: Views = { chords: true, lyrics: true, drums: true, primary: 'hoja' }
+
+/**
+ * Guitarra/bajo/teclado → acordes; voces (y multimedia/sonido) → letra;
+ * batería → batería; dirección o sin instrumentos → todo. Varios roles suman.
+ */
+export function viewsFor(roles: Role[], view: ViewMode = 'auto'): Views {
+  if (view === 'todo') return ALL
+  if (view === 'acordes') return { chords: true, lyrics: false, drums: false, primary: 'hoja' }
+  if (view === 'letra') return { chords: false, lyrics: true, drums: false, primary: 'voces' }
+  if (view === 'bateria') return { chords: false, lyrics: false, drums: true, primary: 'bateria' }
+  if (!roles.length || roles.includes('direccion')) return ALL
+  const chords = roles.some((r) => CHORD_ROLES.includes(r))
+  const lyrics = roles.some((r) => LYRIC_ROLES.includes(r))
+  const drums = roles.includes('bateria')
+  return { chords, lyrics, drums, primary: chords ? 'hoja' : drums ? 'bateria' : 'voces' }
+}
+
+export const songPath = (id: string, v: Views) =>
+  v.primary === 'voces' ? `/cancion/${id}/voces` : v.primary === 'bateria' ? `/cancion/${id}/bateria` : `/cancion/${id}`

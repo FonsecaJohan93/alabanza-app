@@ -1,11 +1,11 @@
 import type { Config, Context } from '@netlify/functions'
 import { json, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
-import { isRole, type Member } from '../../src/lib/team.ts'
+import { cleanPrefs, isRole, type Member } from '../../src/lib/team.ts'
 
 // El equipo: GET /api/users lista a todos (sin contraseñas);
 // PUT /api/users/me cambia el nombre y los instrumentos propios.
 
-const toMember = (r: UserRecord): Member => ({ username: r.username, name: r.name ?? r.username, roles: r.roles ?? [] })
+const toMember = (r: UserRecord): Member => ({ username: r.username, name: r.name ?? r.username, roles: r.roles ?? [], prefs: r.prefs ?? {} })
 
 export default async (req: Request, context: Context) => {
   const username = userFromRequest(req)
@@ -26,7 +26,8 @@ export default async (req: Request, context: Context) => {
     const body = await req.json().catch(() => ({}))
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 40) : rec.name
     const roles = Array.isArray(body.roles) ? [...new Set(body.roles.filter(isRole))] : (rec.roles ?? [])
-    const next: UserRecord = { ...rec, name, roles }
+    const prefs = cleanPrefs(body.prefs, rec.prefs ?? {})
+    const next: UserRecord = { ...rec, name, roles, prefs }
     await store.setJSON(username, next)
     return json({ member: toMember(next) })
   }

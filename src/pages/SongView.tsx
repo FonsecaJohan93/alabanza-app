@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { capoSuggestion, transposeKey } from '../lib/chordsheet'
-import { useSong, useStore } from '../lib/store'
+import { useMe, useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
 import { DrumButton } from '../components/DrumButton'
 import { VoiceButton } from '../components/VoiceButton'
@@ -34,6 +34,7 @@ function usePref<T>(key: string, initial: T): [T, (v: T) => void] {
 export default function SongView() {
   const { id } = useParams()
   const song = useSong(id)
+  const { prefs, views } = useMe()
   const loaded = useStore((s) => s.loaded)
   const [semis, setSemis] = usePref(`alabanza:transpose:${id}`, 0)
   const [showChords, setShowChords] = usePref('alabanza:showChords', true)
@@ -58,8 +59,8 @@ export default function SongView() {
         back="/repertorio"
         actions={
           <>
-          <VoiceButton song={song} />
-          <DrumButton song={song} />
+          {views.lyrics && <VoiceButton song={song} />}
+          {views.drums && <DrumButton song={song} />}
           <Link to={`/cancion/${song.id}/editar`} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft">
             Editar
           </Link>
@@ -87,7 +88,7 @@ export default function SongView() {
           </button>
         )}
         <div className="flex-1" />
-        <PulseButton bpm={song.bpm} feel={song.drums?.feel} />
+        <PulseButton bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />
         <button
           onClick={() => setShowChords(!showChords)}
           className={`rounded-xl px-2.5 py-2 text-sm font-medium ${showChords ? 'bg-panel' : 'bg-accent text-white'}`}
