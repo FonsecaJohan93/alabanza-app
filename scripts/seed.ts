@@ -3,7 +3,9 @@
 // se importan con acordes. Se puede correr varias veces: actualiza por título.
 //
 //   node scripts/seed.ts [http://localhost:8889] [usuario] [contraseña]
+//   SEED_SECRET=<AUTH_SECRET> node scripts/seed.ts https://alabanza-mirefugio.netlify.app
 
+import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { guessKey, textToChordPro } from '../src/lib/chordsheet.ts'
 import { normalizeLaCuerdaUrl, parseLaCuerda, sourceOf } from '../src/lib/importers.ts'
@@ -49,7 +51,15 @@ async function api<T>(path: string, init: RequestInit = {}, token?: string): Pro
   return body as T
 }
 
-const { token } = await api<{ token: string }>('/api/login', { method: 'POST', body: JSON.stringify({ username: user, password: pass }) })
+// Con SEED_SECRET (el AUTH_SECRET del servidor) el script firma su propio
+// acceso como "repertorio" y no necesita una cuenta con contraseña.
+function signToken(username: string, secret: string) {
+  const payload = Buffer.from(JSON.stringify({ u: username, exp: Date.now() + 3_600_000 })).toString('base64url')
+  return `${payload}.${createHmac('sha256', secret).update(payload).digest('base64url')}`
+}
+const token = process.env.SEED_SECRET
+  ? signToken('repertorio', process.env.SEED_SECRET)
+  : (await api<{ token: string }>('/api/login', { method: 'POST', body: JSON.stringify({ username: user, password: pass }) })).token
 let { songs } = await api<{ songs: Song[] }>('/api/songs', {}, token)
 const byTitle = () => new Map(songs.map((s) => [fold(s.title), s]))
 
