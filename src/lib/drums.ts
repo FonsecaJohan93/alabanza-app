@@ -2,6 +2,7 @@
 // se tocan y con qué dinámica. Código puro: lo usan el cliente y el servidor.
 
 import { parseChordPro } from './chordsheet.ts'
+import { cleanPattern, type Pattern } from './rhythm.ts'
 
 export const DRUM_PARTS = [
   { id: 'bombo', label: 'Bombo' },
@@ -33,6 +34,8 @@ export interface DrumSection {
   parts: DrumPart[]
   dynamic?: Dynamic
   note?: string
+  /** Ritmo de la sección (cuadrícula de golpes) para escucharlo. */
+  pattern?: Pattern
 }
 
 export interface DrumChart {
@@ -59,7 +62,7 @@ export function cleanDrums(v: unknown): DrumChart | undefined {
       if (!name) return null
       const parts = (Array.isArray(r.parts) ? r.parts : []).filter((p): p is DrumPart => typeof p === 'string' && PART_IDS.has(p))
       const dynamic = typeof r.dynamic === 'string' && DYN_IDS.has(r.dynamic) ? (r.dynamic as Dynamic) : undefined
-      return { name, parts: [...new Set(parts)], dynamic, note: str(r.note, 300) || undefined }
+      return { name, parts: [...new Set(parts)], dynamic, note: str(r.note, 300) || undefined, pattern: cleanPattern(r.pattern) }
     })
     .filter((s): s is DrumSection => !!s)
   const chart: DrumChart = { feel: str(o.feel, 40) || undefined, note: str(o.note, 1000) || undefined, sections }

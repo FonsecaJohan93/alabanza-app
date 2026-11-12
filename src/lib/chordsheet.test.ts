@@ -257,3 +257,19 @@ test('propuesta de canciones y equipo', async () => {
   assert.ok(team.some((a) => a.role === 'direccion' && a.username === 'caro'))
   assert.ok(team.some((a) => a.role === 'acustica' && a.username === 'caro')) // dirigir + tocar sí
 })
+
+test('ritmos: cuadrícula, conteo y validación', async () => {
+  const { gridFor, countLabels, cleanPattern, toggleHit, presets, stepSeconds } = await import('./rhythm.ts')
+  assert.deepEqual(gridFor('Balada 4/4'), { beats: 4, sub: 4, steps: 16 })
+  assert.deepEqual(gridFor('6/8'), { beats: 6, sub: 2, steps: 12 })
+  assert.deepEqual(gridFor('3/4'), { beats: 3, sub: 4, steps: 12 })
+  assert.deepEqual(countLabels(2, 4), ['1', 'e', 'y', 'a', '2', 'e', 'y', 'a'])
+  assert.equal(stepSeconds(60, 4), 0.25)
+  // El servidor limpia lo que no corresponde
+  assert.deepEqual(cleanPattern({ steps: 16, hits: { bombo: [0, 0, 8, 99], cosa: [1] } }), { steps: 16, hits: { bombo: [0, 8] } })
+  assert.equal(cleanPattern({ steps: 7, hits: { bombo: [0] } }), undefined)
+  const p = toggleHit({ steps: 16, hits: {} }, 'caja', 4)
+  assert.deepEqual(p.hits, { caja: [4] })
+  assert.deepEqual(toggleHit(p, 'caja', 4).hits, {})
+  for (const { pattern } of [...presets(16), ...presets(12)]) assert.deepEqual(cleanPattern(pattern), pattern)
+})
