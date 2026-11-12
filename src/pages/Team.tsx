@@ -6,7 +6,6 @@ import { Button, ErrorBox, Field, Header, inputClass } from '../components/ui'
 export default function Team() {
   const session = useSession()
   const members = useMembers()
-  const me = members.find((m) => m.username === session?.username)
 
   useEffect(() => {
     void refreshMembers()
@@ -16,8 +15,6 @@ export default function Team() {
     <div className="pb-10">
       <Header title="Equipo" />
       <div className="space-y-5 px-4 pt-4">
-        {me ? <Profile key={me.username} name={me.name} roles={me.roles} /> : null}
-
         <section>
           <h2 className="mb-2 text-xs font-bold tracking-wider text-slate-500 uppercase">
             {members.length} {members.length === 1 ? 'persona' : 'personas'} en el equipo
@@ -45,7 +42,7 @@ export default function Team() {
   )
 }
 
-function Profile({ name: initialName, roles: initialRoles }: { name: string; roles: Role[] }) {
+export function ProfileForm({ name: initialName, roles: initialRoles }: { name: string; roles: Role[] }) {
   const [name, setName] = useState(initialName)
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [busy, setBusy] = useState(false)
@@ -68,7 +65,7 @@ function Profile({ name: initialName, roles: initialRoles }: { name: string; rol
 
   return (
     <section className="space-y-3 rounded-2xl bg-panel p-4">
-      <h2 className="font-semibold">Tu perfil</h2>
+      <h2 className="font-semibold">Nombre e instrumentos</h2>
       <Field label="Nombre">
         <input className={inputClass} value={name} onChange={(e) => (setName(e.target.value), setMsg(null))} />
       </Field>

@@ -22,13 +22,13 @@ export default function Home() {
       <Header title="Inicio" />
       <div className="px-4 pt-5">
         <p className="text-2xl font-bold">Hola, {session?.name}</p>
-        {/* Un solo botón: primero el perfil (instrumentos); con eso listo, la configuración */}
-        {meLoaded && (
+        {/* Aviso solo para quien aún no marcó sus instrumentos */}
+        {meLoaded && !roles.length && (
           <Link
-            to={roles.length ? '/configuracion' : '/equipo'}
+            to="/perfil"
             className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent active:brightness-95"
           >
-            {roles.length ? 'Completar configuración' : 'Completar mi perfil'} →
+            Completar mi perfil →
           </Link>
         )}
         <p className="mt-1 text-slate-600">

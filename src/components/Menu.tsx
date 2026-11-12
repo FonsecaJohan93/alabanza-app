@@ -12,7 +12,6 @@ const ITEMS = [
   { to: '/', label: 'Inicio', icon: 'M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5' },
   { to: '/repertorio', label: 'Repertorio', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm11-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' },
   { to: '/equipo', label: 'Equipo', icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm10 8v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7' },
-  { to: '/configuracion', label: 'Configuración', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2-1.2L14.5 3h-5l-.4 2.6a7.6 7.6 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2 1.2l.4 2.6h5l.4-2.6a7.6 7.6 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z' },
 ]
 
 const MenuContext = createContext<() => void>(() => {})
@@ -51,7 +50,14 @@ export function MenuProvider({ children }: { children: ReactNode }) {
           <img src="/pwa-192x192.png" alt="" className="h-10 w-10 rounded-xl" />
           <div className="min-w-0">
             <div className="text-lg leading-tight font-bold">Alabanza</div>
-            {session && <div className="truncate text-sm text-slate-600">{session.name}</div>}
+            {session && (
+              <div className="flex items-baseline gap-2">
+                <span className="truncate text-sm text-slate-600">{session.name}</span>
+                <NavLink to="/perfil" className="shrink-0 text-sm font-semibold text-accent underline-offset-2 hover:underline">
+                  Ver perfil
+                </NavLink>
+              </div>
+            )}
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">

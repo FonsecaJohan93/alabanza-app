@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { saveProfile, useMe, useSession } from '../lib/store'
 import { roleLabel, VIEW_MODES, viewsFor, type Prefs } from '../lib/team'
-import { ErrorBox, Header } from '../components/ui'
+import { ErrorBox } from '../components/ui'
 
 /** Explica en palabras lo que la persona va a ver. */
 function describe(v: ReturnType<typeof viewsFor>): string {
@@ -11,7 +10,8 @@ function describe(v: ReturnType<typeof viewsFor>): string {
   return parts.join(' y ').replace(/^./, (c) => c.toUpperCase())
 }
 
-export default function Settings() {
+/** Preferencias de la cuenta (van dentro de Mi perfil). */
+export function Preferences() {
   const session = useSession()
   const { prefs, roles, loaded } = useMe()
   const [saving, setSaving] = useState(false)
@@ -35,9 +35,8 @@ export default function Settings() {
   const auto = viewsFor(roles, 'auto')
 
   return (
-    <div className="pb-10">
-      <Header title="Configuración" actions={saving ? <span className="text-sm text-slate-400">Guardando…</span> : undefined} />
-      <div className="space-y-5 px-4 pt-4">
+    <>
+      {saving && <p className="text-right text-sm text-slate-400">Guardando…</p>}
         <section className="rounded-2xl bg-panel p-4">
           <label className="flex items-center gap-3">
             <span className="min-w-0 flex-1">
@@ -85,15 +84,10 @@ export default function Settings() {
             })}
           </div>
           <p className="mt-3 text-sm text-slate-500">
-            Tus instrumentos se marcan en{' '}
-            <Link to="/equipo" className="font-medium text-accent underline">
-              Equipo
-            </Link>
-            . Si un día necesitas otra vista, cámbiala aquí.
+            Tus instrumentos se marcan arriba, en tu perfil. Si un día necesitas otra vista, cámbiala aquí.
           </p>
         </section>
         {error && <ErrorBox>{error}</ErrorBox>}
-      </div>
-    </div>
+    </>
   )
 }
