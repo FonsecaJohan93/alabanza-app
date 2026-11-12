@@ -13,6 +13,7 @@ import {
   transposeKey,
 } from './chordsheet.ts'
 import { parseLaCuerda, sourceOf, normalizeLaCuerdaUrl } from './importers.ts'
+import { blocksOf, insertCue, removeLine } from './chordsheet.ts'
 
 test('reconoce acordes', () => {
   for (const c of ['A', 'Am', 'Am7', 'Cmaj7', 'C7M', 'Dsus4', 'G/B', 'F#m7b5', 'E7(9)', 'Bb', 'A4', 'Asus2', 'C#m', 'D/F#', 'Gadd9', 'Bdim', 'C°', 'E+'])
@@ -33,6 +34,7 @@ test('distingue líneas de acordes y de letra', () => {
   assert.ok(isChordLine('Dm.               F'))
   assert.ok(isChordLine('     C#7(4/9-)  C#7(9-)'))
   assert.ok(!isChordLine('Dios.'))
+  assert.ok(isChordLine('( Bm  A  G  Em  F#7 )'))
   assert.equal(textToChordPro('Am.   G\nletra aqui'), '[Am]letra [G]aqui')
   assert.ok(!isChordLine(''))
 })
@@ -115,4 +117,21 @@ test('LaCuerda: página real', async () => {
   assert.equal(textToChordPro(chordProToText(song.content)), song.content)
   console.log(song.content)
   console.log(song.youtube)
+})
+
+test('indicadores para el equipo', () => {
+  const cp = textToChordPro('Coro:\nG\nSanto\n\n>> Otra vez al coro')
+  assert.equal(cp, '{c: Coro}\n[G]Santo\n\n{ci: Otra vez al coro}')
+  assert.deepEqual(parseChordPro(cp)[3], { type: 'cue', text: 'Otra vez al coro' })
+  assert.equal(chordProToText(cp), 'Coro:\nG\nSanto\n\n>> Otra vez al coro')
+  const withCue = insertCue('[G]a\n\n[D]b', 2, 'Solo instrumental')
+  assert.equal(withCue, '[G]a\n\n{ci: Solo instrumental}\n[D]b')
+  assert.equal(removeLine(withCue, 2), '[G]a\n\n[D]b')
+})
+
+test('bloques por estrofa', () => {
+  const b = blocksOf(parseChordPro('{c: Verso}\n[G]a\n[D]b\n\n[C]c\n{ci: Otra vez}\n{c: Coro}\n[G]d'))
+  assert.deepEqual(b.map((x) => [x.start, x.lines.length]), [[0, 3], [4, 1], [5, 1], [6, 2]])
+  // La sección se queda con su letra aunque haya una línea vacía en medio
+  assert.deepEqual(blocksOf(parseChordPro('{c: Coro}\n\n[G]a')).map((x) => x.lines.length), [2])
 })

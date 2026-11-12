@@ -40,6 +40,7 @@ export function isChordLine(line: string): boolean {
   for (const raw of tokens) {
     // Algunos transcriptores escriben "Dm." o "G," : se ignora ese signo
     const t = raw.replace(/^\(+|\)+$/g, '').replace(/[.,;]+$/, '')
+    if (!t) continue // "(" o ")" sueltos: "( Bm  A  G )"
     if (isChord(t)) chords++
     else if (looksLikeChord(t)) odd++
     else if (!FILLER_RE.test(raw) && !FILLER_RE.test(t)) return false
@@ -203,6 +204,12 @@ export function linesToChordPro(lines: SourceLine[]): string {
       out.push(chordOnlyLine(inline[2]))
       continue
     }
+    // ">> Otra vez al coro": indicador para el equipo
+    const cue = /^\s*>>\s*(.+)$/.exec(text)
+    if (cue) {
+      out.push(`{ci: ${cue[1].trim()}}`)
+      continue
+    }
     const sec = sectionName(text)
     if (sec) {
       out.push(`{c: ${sec}}`)
@@ -230,6 +237,8 @@ export type SheetLine =
   | { type: 'chords'; chords: string[] }
   | { type: 'lyrics'; parts: { chord?: string; text: string }[] }
   | { type: 'tab'; text: string }
+  /** Indicador para el equipo: "Otra vez al coro", "Solo instrumental"… */
+  | { type: 'cue'; text: string }
 
 const TAB_RE = /^\s*[eBGDAEbgdae]\s*[|:]?[-\d|hpbrx/\\~]{4,}/
 
@@ -243,6 +252,7 @@ export function parseChordPro(cp: string): SheetLine[] {
       const dir = /^\s*\{\s*(c|comment|ci|comment_italic|soc|start_of_chorus|sov|start_of_verse|sob|start_of_bridge|eoc|end_of_chorus|eov|end_of_verse|eob|end_of_bridge)\s*(?::\s*(.*?))?\s*\}\s*$/i.exec(line)
       if (dir) {
         const k = dir[1].toLowerCase()
+        if (k === 'ci' || k === 'comment_italic') return dir[2] ? { type: 'cue', text: dir[2] } : { type: 'empty' }
         if (k.startsWith('e')) return { type: 'empty' }
         const fallback = /chorus|soc/.test(k) ? 'Coro' : /bridge|sob/.test(k) ? 'Puente' : /verse|sov/.test(k) ? 'Verso' : ''
         return { type: 'section', name: dir[2] || fallback }
@@ -278,6 +288,8 @@ export function chordProToText(cp: string): string {
           return ['']
         case 'section':
           return [`${l.name}:`]
+        case 'cue':
+          return [`>> ${l.text}`]
         case 'tab':
           return [l.text]
         case 'chords':
@@ -314,4 +326,49 @@ export function lyricsOnly(cp: string): string {
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Agrega un indicador antes de la línea `beforeLine` (índice de línea del ChordPro). */
+export function insertCue(cp: string, beforeLine: number, text: string): string {
+  const lines = cp.split('\n')
+  lines.splice(Math.max(0, Math.min(beforeLine, lines.length)), 0, `{ci: ${text.replace(/[{}]/g, '').trim()}}`)
+  return lines.join('\n')
+}
+
+/** Quita la línea `line` (para borrar un indicador). */
+export function removeLine(cp: string, line: number): string {
+  const lines = cp.split('\n')
+  lines.splice(line, 1)
+  return lines.join('\n')
+}
+
+export interface SheetBlock {
+  /** Índice (en el ChordPro) de la primera línea del bloque. */
+  start: number
+  lines: { line: SheetLine; index: number }[]
+}
+
+/**
+ * Agrupa la hoja en bloques (estrofas): se corta en cada línea vacía y en
+ * cada sección. Los indicadores van en su propio bloque. Sirve para no partir
+ * una estrofa entre columnas y para poner indicadores entre párrafos.
+ */
+export function blocksOf(lines: SheetLine[]): SheetBlock[] {
+  const blocks: SheetBlock[] = []
+  let cur: SheetBlock | null = null
+  lines.forEach((line, index) => {
+    if (line.type === 'empty') {
+      // Una sección sola sigue esperando su letra aunque haya líneas vacías
+      if (cur && cur.lines.length === 1 && cur.lines[0].line.type === 'section') return
+      cur = null
+      return
+    }
+    if (line.type === 'section' || line.type === 'cue' || !cur || cur.lines[0]?.line.type === 'cue') {
+      cur = { start: index, lines: [] }
+      blocks.push(cur)
+    }
+    cur.lines.push({ line, index })
+    if (line.type === 'cue') cur = null
+  })
+  return blocks
 }

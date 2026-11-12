@@ -48,3 +48,18 @@ body {
 .sheet.no-chords .c {
   display: none;
 }
+
+/* Tablet en horizontal: la hoja se lee como páginas. Las columnas ocupan el
+   alto de la pantalla y se pasa a la siguiente deslizando hacia el lado
+   (así no hay que bajar y volver a subir para leer la segunda columna). */
+@media (orientation: landscape) and (min-width: 768px) {
+  .pages {
+    height: calc(100dvh - var(--pages-top, 7rem));
+    column-width: 17em;
+    column-gap: 3rem;
+    column-fill: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+  }
+}

@@ -8,6 +8,7 @@ import SongList from './pages/SongList'
 import Team from './pages/Team'
 import { MenuProvider } from './components/Menu'
 import SongView from './pages/SongView'
+import VocalView from './pages/VocalView'
 import NewSong from './pages/NewSong'
 import SongEdit from './pages/SongEdit'
 
@@ -22,7 +23,7 @@ export default function App() {
 
   return (
     <MenuProvider>
-      <div className="mx-auto min-h-dvh max-w-2xl">
+      <div className="mx-auto min-h-dvh max-w-2xl md:landscape:max-w-6xl">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/repertorio" element={<SongList />} />
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/nueva/editar" element={<SongEdit />} />
           <Route path="/cancion/:id" element={<SongView />} />
           <Route path="/cancion/:id/editar" element={<SongEdit />} />
+          <Route path="/cancion/:id/voces" element={<VocalView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

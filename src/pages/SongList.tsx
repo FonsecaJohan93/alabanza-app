@@ -3,13 +3,10 @@ import { Link } from 'react-router-dom'
 import { lyricsOnly } from '../lib/chordsheet'
 import { refreshSongs, useSongs, useStore } from '../lib/store'
 import { DrumButton } from '../components/DrumButton'
+import { VoiceButton } from '../components/VoiceButton'
 import { ErrorBox, Header, TEMPO_LABEL } from '../components/ui'
 
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export default function SongList() {
   const songs = useSongs()
@@ -30,9 +27,7 @@ export default function SongList() {
     [songs],
   )
   const terms = fold(q).split(/\s+/).filter(Boolean)
-  const shown = songs.filter(
-    (s) => (!tag || s.tags.includes(tag)) && terms.every((t) => index.get(s.id)?.includes(t)),
-  )
+  const shown = songs.filter((s) => (!tag || s.tags.includes(tag)) && terms.every((t) => index.get(s.id)?.includes(t)))
 
   return (
     <div className="pb-24">
@@ -90,6 +85,7 @@ export default function SongList() {
                       </p>
                     </div>
                     {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{s.key}</span>}
+                    <VoiceButton song={s} />
                     <DrumButton song={s} />
                   </Link>
                 </li>
