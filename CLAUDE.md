@@ -29,8 +29,9 @@ React 19 + TS + Vite + Tailwind v4 + vite-plugin-pwa. Backend: Netlify Functions
 - El usuario **prefiere Cifra Club** como fuente de acordes. Se leen abriendo la página en el navegador integrado (visita normal); nunca con curl/headers falsos.
 
 ## Publicación
-- **Producción:** https://alabanza-mirefugio.netlify.app (sitio Netlify `alabanza-mirefugio`, carpeta vinculada). Env en Netlify: `AUTH_SECRET` (secreto; copia local en `.env` como `PROD_AUTH_SECRET`), `INVITE_CODE` = `mirefugio`.
-- **Deploy:** manual con `netlify deploy --prod --build`. Todavía NO hay repo en GitHub: el usuario no ha decidido si público (como gym-app, necesario en el plan gratis para deploy automático) o privado. Git es solo local. Nunca subir secretos ni las canciones (`scripts/seed/` y `.env` están en .gitignore).
+- **Producción:** https://alabanza-mirefugio.netlify.app (sitio Netlify `alabanza-mirefugio`, carpeta vinculada). Env en Netlify: `AUTH_SECRET` (secreto; copia local en `.env` como `PROD_AUTH_SECRET`) e `INVITE_CODE` (código del equipo; copia local en `.env` como `PROD_INVITE_CODE`). Nunca escribir el código en el repo.
+- **Repo:** GitHub `FonsecaJohan93/alabanza-app`, **público** a propósito (como gym-app: el plan gratis de Netlify bloquea builds de repos privados). Aviso de derechos reservados en `LICENSE`. Nunca subir secretos, el código del equipo ni las canciones (`scripts/seed/` y `.env` están en .gitignore).
+- **Deploy:** automático en Netlify al hacer push a `main`. También funciona `netlify deploy --prod --build`.
 - Cargar datos en producción: `set -a; source .env; set +a; SEED_SECRET=$PROD_AUTH_SECRET node scripts/seed.ts https://alabanza-mirefugio.netlify.app` (firma un token como "repertorio", sin cuenta).
 
 ## Local
