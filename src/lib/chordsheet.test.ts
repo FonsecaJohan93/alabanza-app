@@ -223,3 +223,37 @@ test('tono del domingo y capo', async () => {
   // Tonos menores
   assert.deepEqual(keyView('Em', 'F#m', 2), { semis: 0, shapeKey: 'Em' })
 })
+
+test('propuesta de canciones y equipo', async () => {
+  const { themeTags, proposeSongs, nextAlternative, proposeTeam } = await import('./propose.ts')
+  assert.ok(themeTags('Fe en medio de la prueba').includes('confianza'))
+  assert.ok(themeTags('Santa Cena').includes('cruz'))
+  const mk = (id: string, title: string, tags: string[], content = '[G]letra') =>
+    ({ id, title, artist: '', key: 'G', tags, content, createdAt: '', createdBy: '', updatedAt: '', updatedBy: '' }) as never
+  const songs = [
+    mk('a1', 'Gozo', ['alabanza', 'gozo']),
+    mk('a2', 'Fiel', ['alabanza', 'fidelidad']),
+    mk('a3', 'Otra', ['alabanza']),
+    mk('d1', 'Confío', ['adoración', 'confianza']),
+    mk('d2', 'Océanos', ['adoración', 'fe', 'confianza']),
+    mk('d3', 'Santo', ['adoración', 'santidad']),
+  ]
+  const history = [{ date: '2026-11-08', items: [{ songId: 'd2' }], updatedAt: '', updatedBy: '' }]
+  const { picks, ranked } = proposeSongs(songs, { theme: 'fe y confianza', alabanza: 1, adoracion: 2, history, date: '2026-11-15' })
+  assert.deepEqual(picks.map((p) => p.song.id), ['a2', 'd1', 'd2'])
+  // Océanos se tocó el domingo pasado: queda detrás de "Confío"
+  assert.ok(picks[2].reasons.includes('se tocó el domingo pasado'))
+  // Cambiar "Fiel" por la siguiente alabanza
+  assert.equal(nextAlternative(ranked, picks, picks[0].song)?.song.id !== 'a2', true)
+  // Equipo: rota a quien hace más tiempo no toca
+  const members = [
+    { username: 'ana', name: 'Ana', roles: ['bateria', 'voz'] },
+    { username: 'beto', name: 'Beto', roles: ['bateria'] },
+    { username: 'caro', name: 'Caro', roles: ['direccion', 'acustica'] },
+  ] as never
+  const past = [{ date: '2026-11-08', items: [], team: [{ role: 'bateria', username: 'ana' }], updatedAt: '', updatedBy: '' }]
+  const team = proposeTeam(members, past as never, '2026-11-15')
+  assert.deepEqual(team.find((a) => a.role === 'bateria')?.username, 'beto')
+  assert.ok(team.some((a) => a.role === 'direccion' && a.username === 'caro'))
+  assert.ok(team.some((a) => a.role === 'acustica' && a.username === 'caro')) // dirigir + tocar sí
+})

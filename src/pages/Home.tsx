@@ -50,12 +50,14 @@ export default function Home() {
             ) : !items.length ? (
               <div className="mt-5 rounded-2xl bg-panel p-6 text-center">
                 <p className="font-medium">Todavía no hay canciones para este domingo</p>
-                <Link
-                  to={`/servicio/${date}`}
-                  className="mt-3 inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white"
-                >
-                  Armar la lista
-                </Link>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <Link to="/planear" className="inline-block rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+                    ✨ Proponer por tema
+                  </Link>
+                  <Link to={`/servicio/${date}`} className="inline-block rounded-xl bg-panel px-4 py-2.5 text-sm font-semibold text-accent">
+                    Armar a mano
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="mt-5 space-y-5">
@@ -84,9 +86,14 @@ export default function Home() {
                 ))}
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>{service && `Lista de ${service.updatedBy}`}</span>
-                  <Link to={`/servicio/${date}`} className="text-sm font-semibold text-accent">
-                    Editar lista
-                  </Link>
+                  <span className="flex gap-3">
+                    <Link to="/planear" className="text-sm font-semibold text-accent">
+                      ✨ Proponer
+                    </Link>
+                    <Link to={`/servicio/${date}`} className="text-sm font-semibold text-accent">
+                      Editar lista
+                    </Link>
+                  </span>
                 </div>
               </div>
             )}

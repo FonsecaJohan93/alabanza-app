@@ -12,6 +12,7 @@ import VocalView from './pages/VocalView'
 import DrumPage from './pages/DrumPage'
 import StructureEdit from './pages/StructureEdit'
 import Profile from './pages/Profile'
+import Plan from './pages/Plan'
 import NewSong from './pages/NewSong'
 import SongEdit from './pages/SongEdit'
 
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/cancion/:id/bateria" element={<DrumPage />} />
           <Route path="/cancion/:id/estructura" element={<StructureEdit />} />
           <Route path="/perfil" element={<Profile />} />
+          <Route path="/planear" element={<Plan />} />
           <Route path="/configuracion" element={<Navigate to="/perfil" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -10,6 +10,7 @@ const Icon = ({ d }: { d: string }) => (
 
 const ITEMS = [
   { to: '/', label: 'Inicio', icon: 'M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5' },
+  { to: '/planear', label: 'Planear domingo', icon: 'M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 7.5 1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.4 2-.3 1-2Z' },
   { to: '/repertorio', label: 'Repertorio', icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm11-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' },
   { to: '/equipo', label: 'Equipo', icon: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm10 8v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7' },
 ]

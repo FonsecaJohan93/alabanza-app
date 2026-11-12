@@ -96,3 +96,5 @@ export const fetchPersonal = () => call<{ personal: Personal }>('/api/personal')
 
 export const savePersonalSong = (songId: string, data: PersonalSong) =>
   call<{ song: PersonalSong }>(`/api/personal/${songId}`, { method: 'PUT', body: JSON.stringify(data) }).then((r) => r.song)
+
+export const fetchServices = () => call<{ services: Service[] }>('/api/services').then((r) => r.services)
