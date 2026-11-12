@@ -30,6 +30,10 @@ test('distingue líneas de acordes y de letra', () => {
   assert.ok(isChordLine('D                   C#mD   Bm     F#m'))
   assert.ok(!isChordLine('Dios Eres Amor'))
   assert.ok(!isChordLine('Al Cordero De Dios'))
+  assert.ok(isChordLine('Dm.               F'))
+  assert.ok(isChordLine('     C#7(4/9-)  C#7(9-)'))
+  assert.ok(!isChordLine('Dios.'))
+  assert.equal(textToChordPro('Am.   G\nletra aqui'), '[Am]letra [G]aqui')
   assert.ok(!isChordLine(''))
 })
 
@@ -40,6 +44,7 @@ test('nombres de sección', () => {
   assert.equal(sectionName('[Refrão]'), 'Refrão')
   assert.equal(sectionName('[Primera Parte]'), 'Primera Parte')
   assert.equal(sectionName('Segunda parte:'), 'Segunda parte')
+  assert.equal(sectionName('[Tab - Intro]'), 'Tab - Intro')
   assert.equal(sectionName('Coronado de gloria'), null)
 })
 

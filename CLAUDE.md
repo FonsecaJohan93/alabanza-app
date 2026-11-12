@@ -29,6 +29,7 @@ React 19 + TS + Vite + Tailwind v4 + vite-plugin-pwa. Backend: Netlify Functions
 ## Datos iniciales
 - Hoja del equipo en Drive ("Repertorio", pestaña 2025; el usuario tiene el link): nombre, artista, tono, link de acordes, YouTube, género (Alabanza/Adoración), veces tocada. Útil para la fase 2 (historial).
 - `scripts/seed.ts` carga el CSV de la hoja + `scripts/seed/domingo.json` (canciones copiadas de Cifra Club desde el navegador integrado) en la API. `scripts/seed/` está en .gitignore (datos del equipo). Correr: `set -a; source .env; set +a; node scripts/seed.ts [url] [usuario] [contraseña]`.
+- `scripts/seed-cifraclub.ts` carga `scripts/seed/cifraclub.json`: hojas leídas de Cifra Club desde el navegador integrado (en la pestaña de cifraclub.com, `fetch` same-origin de cada página con pausa de 1,2 s; el resultado grande lo guarda el harness en un archivo). Solo llena canciones sin hoja. El tono se toma del "Tono:" de la página si coincide con los acordes escritos.
 - El usuario **prefiere Cifra Club** como fuente de acordes. Se leen abriendo la página en el navegador integrado (visita normal); nunca con curl/headers falsos.
 
 ## Publicación

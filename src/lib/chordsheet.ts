@@ -36,12 +36,16 @@ export function isChordLine(line: string): boolean {
   const tokens = line.trim().split(/\s+/).filter(Boolean)
   if (!tokens.length) return false
   let chords = 0
+  let odd = 0
   for (const raw of tokens) {
-    const t = raw.replace(/^\(+|\)+$/g, '')
+    // Algunos transcriptores escriben "Dm." o "G," : se ignora ese signo
+    const t = raw.replace(/^\(+|\)+$/g, '').replace(/[.,;]+$/, '')
     if (isChord(t)) chords++
-    else if (!looksLikeChord(t) && !FILLER_RE.test(raw) && !FILLER_RE.test(t)) return false
+    else if (looksLikeChord(t)) odd++
+    else if (!FILLER_RE.test(raw) && !FILLER_RE.test(t)) return false
   }
-  return chords > 0
+  // Solo acordes raros ("C#7(4/9-)"): vale si alguno lleva número o alteración
+  return chords > 0 || (odd > 0 && tokens.some((t) => /[\d#]/.test(t)))
 }
 
 const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -111,7 +115,7 @@ export function capoSuggestion(key: string): { capo: number; shape: string } | n
 // ---------------------------------------------------------------- secciones
 
 const SECTION_WORDS =
-  'intro|introducci[oó]n|coro|estribillo|pre-?coro|pre coro|pre-?estribillo|verso|estrofa|puente|final|outro|coda|instrumental|interludio|solo|tag|vamp|' +
+  'intro|introducci[oó]n|coro|estribillo|pre-?coro|pre coro|pre-?estribillo|verso|estrofa|puente|final|outro|coda|instrumental|interludio|solo|tag|tab|vamp|' +
   '(?:primera|segunda|tercera|cuarta) parte|' +
   'chorus|pre-?chorus|verse|bridge|ending|' +
   'refr[aã]o|pr[eé]-?refr[aã]o|primeira parte|segunda parte|terceira parte|parte|ponte|introdu[cç][aã]o'
@@ -146,7 +150,8 @@ function mergeChordsIntoLyrics(chordLine: string, lyric: string): string {
   const end = text.length
   // Un acorde que cae sobre un espacio se pega a la palabra siguiente (si no,
   // queda un hueco raro en la letra al mostrarla)
-  const chords = chordPositions(chordLine).map(({ col, chord }) => {
+  const chords = chordPositions(chordLine).map(({ col, chord: raw }) => {
+    const chord = raw.replace(/(?<=\S)[.,;]+$/, '')
     if (col >= end || text[col] !== ' ') return { col, chord }
     let c = col
     while (c < end && text[c] === ' ') c++
@@ -163,6 +168,7 @@ function mergeChordsIntoLyrics(chordLine: string, lyric: string): string {
 
 function chordOnlyLine(line: string): string {
   return chordPositions(line)
+    .map((c) => ({ ...c, chord: c.chord.replace(/(?<=\S)[.,;]+$/, '') }))
     .map((c) => (isChord(c.chord.replace(/^\(+|\)+$/g, '')) || /[A-G]/.test(c.chord[0]) ? `[${c.chord}]` : c.chord))
     .join('  ')
 }
