@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-accent: #4c3fb8; /* violeta: botones y acordes */
+  --color-accent-soft: #ece9fb;
+  --color-ink: #f7f5f2; /* fondo de la página */
+  --color-panel: #ffffff;
+  --color-line: #e4e0da;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bg-panel {
+  box-shadow: 0 0 0 1px var(--color-line), 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Hoja de acordes: cada palabra lleva su acorde encima y se parte por palabras */
+.sheet .w {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: bottom;
+  white-space: pre;
+}
+.sheet .c {
+  color: var(--color-accent);
+  font-weight: 700;
+  line-height: 1.15;
+  min-height: 1.15em;
+  padding-right: 0.35em;
+}
+.sheet.no-chords .c {
+  display: none;
+}
