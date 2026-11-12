@@ -273,3 +273,19 @@ test('ritmos: cuadrícula, conteo y validación', async () => {
   assert.deepEqual(toggleHit(p, 'caja', 4).hits, {})
   for (const { pattern } of [...presets(16), ...presets(12)]) assert.deepEqual(cleanPattern(pattern), pattern)
 })
+
+test('biblioteca de ritmos y paso de los ritmos viejos', async () => {
+  const { cleanDrums, rhythmOf } = await import('./drums.ts')
+  const pat = { steps: 16, hits: { bombo: [0] } }
+  // Ritmo viejo dentro de la sección → "Ritmo 1" en la biblioteca
+  const a = cleanDrums({ sections: [{ name: 'Intro', parts: [], pattern: pat }] })!
+  assert.equal(a.rhythms?.[0].name, 'Ritmo 1')
+  assert.equal(a.sections[0].rhythm, a.rhythms?.[0].id)
+  assert.equal(a.sections[0].pattern, undefined)
+  assert.deepEqual(rhythmOf(a, a.sections[0])?.pattern, pat)
+  // Biblioteca nueva: la sección apunta a un ritmo; ids raros se descartan
+  const b = cleanDrums({ rhythms: [{ id: 'abc', name: 'Coro fuerte', pattern: pat }, { id: '<x>', name: 'malo', pattern: pat }], sections: [{ name: 'Coro', parts: [], rhythm: 'abc' }, { name: 'Verso', parts: [], rhythm: 'nada' }] })!
+  assert.deepEqual(b.rhythms?.map((r) => r.name), ['Coro fuerte'])
+  assert.equal(b.sections[0].rhythm, 'abc')
+  assert.equal(b.sections[1].rhythm, undefined)
+})

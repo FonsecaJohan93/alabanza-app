@@ -122,3 +122,42 @@ export function PulseButton({ bpm, feel, className = '', autoStart = false }: { 
     </>
   )
 }
+
+/** Tempo grande para la pantalla de batería: el BPM y los tiempos 1 2 3 4 iluminándose. */
+export function BigPulse({ bpm, feel, autoStart = false }: { bpm?: number; feel?: string; autoStart?: boolean }) {
+  const [on, setOn] = useState(autoStart)
+  useEffect(() => {
+    if (autoStart) setOn(true)
+  }, [autoStart, bpm])
+  const beats = beatsPerBar(feel)
+  const beat = usePulse(bpm ?? 0, on && !!bpm)
+  const inBar = beat < 0 ? -1 : beat % beats
+  return (
+    <section className="flex items-center gap-4 rounded-2xl bg-panel p-4" aria-label="Tempo">
+      <button
+        onClick={() => bpm && setOn(!on)}
+        disabled={!bpm}
+        className={`grid h-14 w-14 shrink-0 place-items-center rounded-full text-xl ${on ? 'bg-amber-400 text-amber-950' : 'bg-accent text-white'} disabled:opacity-40`}
+        aria-label={on ? 'Detener pulso' : 'Iniciar pulso'}
+      >
+        {on ? '■' : '▶'}
+      </button>
+      <div className="shrink-0 leading-none">
+        <div className="text-5xl font-black tabular-nums">{bpm ?? '—'}</div>
+        <div className="mt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">{bpm ? 'BPM' : 'Sin BPM'}</div>
+      </div>
+      <div className="flex flex-1 flex-wrap justify-end gap-2">
+        {Array.from({ length: beats }, (_, i) => (
+          <span
+            key={i}
+            className={`grid h-12 w-12 place-items-center rounded-full text-2xl font-black transition-colors duration-75 md:h-16 md:w-16 md:text-3xl ${
+              i === inBar ? (i === 0 ? 'bg-amber-400 text-amber-950' : 'bg-accent text-white') : 'bg-black/5 text-slate-400'
+            }`}
+          >
+            {i + 1}
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}

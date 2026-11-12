@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { chartFromSong, DRUM_PARTS, DYNAMICS, FEELS, type DrumChart, type DrumPart, type DrumSection, type Dynamic } from '../lib/drums'
+import { chartFromSong, DRUM_PARTS, DYNAMICS, FEELS, rhythmOf, type DrumChart, type DrumPart, type DrumSection, type Dynamic } from '../lib/drums'
 import { saveSong } from '../lib/store'
 import type { Song } from '../types'
 import { DrumKitIcon, DynamicIcon, PartIcon } from './DrumIcons'
-import { RhythmEditor, RhythmPlay } from './RhythmEditor'
+import { RhythmPlay } from './RhythmEditor'
 import { Button, ErrorBox, inputClass } from './ui'
 
 const partLabel = (p: DrumPart) => DRUM_PARTS.find((x) => x.id === p)?.label ?? p
@@ -75,7 +75,10 @@ export function DrumView({ song, onEdit }: { song: Song; onEdit: () => void }) {
             <li key={i} className="rounded-2xl bg-panel p-3">
               <div className="flex items-center gap-2">
                 <p className="flex-1 font-semibold">{s.name}</p>
-                {s.pattern && <RhythmPlay id={`view-${song.id}-${i}`} pattern={s.pattern} bpm={song.bpm} feel={chart?.feel} />}
+                {(() => {
+                  const r = rhythmOf(chart, s)
+                  return r ? <RhythmPlay id={`view-${song.id}-${i}`} pattern={r.pattern} bpm={song.bpm} feel={chart?.feel} label={r.name} /> : null
+                })()}
                 {s.dynamic && (
                   <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-sm text-accent">
                     <DynamicIcon dynamic={s.dynamic} size={18} />
@@ -134,7 +137,6 @@ export function DrumEditor({ song, onDone }: { song: Song; onDone: () => void })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const tap = useTapTempo(setBpm)
-  const [rhythmFor, setRhythmFor] = useState<number | null>(null)
 
   const setSection = (i: number, patch: Partial<DrumSection>) =>
     setChart((c) => ({ ...c, sections: c.sections.map((s, j) => (j === i ? { ...s, ...patch } : s)) }))
@@ -250,15 +252,23 @@ export function DrumEditor({ song, onDone }: { song: Song; onDone: () => void })
                   )
                 })}
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  onClick={() => setRhythmFor(i)}
-                  className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent active:brightness-95"
-                >
-                  {s.pattern ? '🥁 Editar ritmo' : '🥁 Crear ritmo'}
-                </button>
-                {s.pattern && <RhythmPlay id={`edit-${i}`} pattern={s.pattern} bpm={bpm} feel={chart.feel} label="Escuchar" />}
-              </div>
+              {chart.rhythms?.length ? (
+                <label className="mt-2 flex items-center gap-2 text-sm">
+                  <span className="text-slate-600">Ritmo</span>
+                  <select
+                    value={s.rhythm ?? ''}
+                    onChange={(e) => setSection(i, { rhythm: e.target.value || undefined, pattern: undefined })}
+                    className="rounded-lg bg-accent-soft px-2 py-1 font-semibold text-accent"
+                  >
+                    <option value="">Sin ritmo</option>
+                    {chart.rhythms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <input
                 className={`${inputClass} mt-2 py-1.5 text-sm`}
                 placeholder="Nota: p. ej. entrar en el 2.º compás, fill en toms"
@@ -291,19 +301,6 @@ export function DrumEditor({ song, onDone }: { song: Song; onDone: () => void })
         </label>
         {error && <ErrorBox>{error}</ErrorBox>}
       </div>
-      {rhythmFor !== null && chart.sections[rhythmFor] && (
-        <RhythmEditor
-          title={`${song.title} · ${chart.sections[rhythmFor].name || 'Sección'}`}
-          feel={chart.feel}
-          bpm={bpm}
-          initial={chart.sections[rhythmFor].pattern}
-          onSave={(pattern) => {
-            setSection(rhythmFor, { pattern })
-            setRhythmFor(null)
-          }}
-          onClose={() => setRhythmFor(null)}
-        />
-      )}
       <div className="flex gap-2 border-t border-line px-5 py-3">
         <Button variant="ghost" onClick={onDone} className="flex-1">
           Cancelar

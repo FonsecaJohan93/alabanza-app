@@ -15,17 +15,23 @@ export function RhythmEditor({
   feel,
   bpm,
   initial,
+  initialName = '',
   onSave,
+  onDelete,
   onClose,
 }: {
   title: string
   feel?: string
   bpm?: number
   initial?: Pattern
-  onSave: (p: Pattern | undefined) => void
+  /** Nombre del ritmo ("Ritmo 1", "Coro fuerte"…). */
+  initialName?: string
+  onSave: (p: Pattern | undefined, name: string) => void
+  onDelete?: () => void
   onClose: () => void
 }) {
   const { beats, sub, steps } = gridFor(feel)
+  const [name, setName] = useState(initialName)
   const [pattern, setPattern] = useState<Pattern>(() => (initial && initial.steps === steps ? initial : { steps, hits: {} }))
   const ref = useRef(pattern)
   ref.current = pattern
@@ -52,6 +58,15 @@ export function RhythmEditor({
       </div>
 
       <div className="flex-1 overflow-auto px-3 py-3">
+        <label className="mb-3 flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-700">Nombre</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ritmo 1, Coro fuerte, Verso suave…"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-white px-3 py-2 text-base outline-none focus:border-accent"
+          />
+        </label>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => (isPlaying ? stopRhythm() : void playRhythm('editor', () => ref.current, tempo, sub))}
@@ -124,9 +139,9 @@ export function RhythmEditor({
       </div>
 
       <div className="flex gap-2 border-t border-line px-4 py-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-        {initial && (
-          <Button variant="danger" onClick={() => (stopRhythm(), onSave(undefined))}>
-            Quitar ritmo
+        {onDelete && (
+          <Button variant="danger" onClick={() => confirm(`¿Eliminar "${name || 'este ritmo'}"?`) && (stopRhythm(), onDelete())}>
+            Eliminar
           </Button>
         )}
         <div className="flex-1" />
@@ -136,10 +151,11 @@ export function RhythmEditor({
         <Button
           onClick={() => {
             stopRhythm()
-            onSave(Object.keys(pattern.hits).length ? pattern : undefined)
+            onSave(Object.keys(pattern.hits).length ? pattern : undefined, name.trim())
           }}
+          disabled={!Object.keys(pattern.hits).length}
         >
-          Usar este ritmo
+          Guardar ritmo
         </Button>
       </div>
     </div>,
