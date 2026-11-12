@@ -1,5 +1,7 @@
 import { Fragment, useMemo } from 'react'
 import { parseChordPro, transposeChord } from '../lib/chordsheet'
+import { drumsFor, type DrumChart } from '../lib/drums'
+import { DynamicIcon, PartIcon } from './DrumIcons'
 
 type Seg = { chord?: string; text: string }
 
@@ -43,12 +45,14 @@ export function ChordSheet({
   targetKey,
   showChords = true,
   fontSize = 17,
+  drums,
 }: {
   content: string
   semitones?: number
   targetKey?: string
   showChords?: boolean
   fontSize?: number
+  drums?: DrumChart
 }) {
   const lines = useMemo(() => parseChordPro(content), [content])
   const t = (c: string) => transposeChord(c, semitones, targetKey)
@@ -59,12 +63,26 @@ export function ChordSheet({
         switch (line.type) {
           case 'empty':
             return <div key={i} className="h-3" />
-          case 'section':
+          case 'section': {
+            const d = showChords ? drumsFor(drums, line.name) : undefined
             return (
-              <div key={i} className="mt-3 mb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">
-                {line.name}
+              <div key={i} className="mt-3 mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">{line.name}</span>
+                {d && (d.dynamic || d.parts.length > 0) && (
+                  <span className="flex items-center gap-1 rounded-full bg-black/5 px-1.5 py-0.5 text-slate-500" title={d.note}>
+                    {d.dynamic && (
+                      <span className="text-accent">
+                        <DynamicIcon dynamic={d.dynamic} size={16} />
+                      </span>
+                    )}
+                    {d.parts.map((p) => (
+                      <PartIcon key={p} part={p} size={16} />
+                    ))}
+                  </span>
+                )}
               </div>
             )
+          }
           case 'tab':
             return showChords ? (
               <pre key={i} className="overflow-x-auto font-mono text-[0.8em] text-slate-600">

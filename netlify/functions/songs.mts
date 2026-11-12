@@ -2,6 +2,7 @@ import type { Config, Context } from '@netlify/functions'
 import { randomBytes } from 'node:crypto'
 import { json, songs, userFromRequest } from '../lib/auth.mts'
 import type { Song } from '../../src/types.ts'
+import { cleanDrums } from '../../src/lib/drums.ts'
 
 // El repertorio es compartido por todo el equipo: una entrada por canción.
 // Al borrar solo se marca como borrada, por si alguien se equivoca.
@@ -30,6 +31,7 @@ function clean(body: Record<string, unknown>): Omit<Song, 'id' | 'createdAt' | '
     sourceUrl: str(body.sourceUrl, 500) || undefined,
     youtube: str(body.youtube, 500) || undefined,
     notes: str(body.notes, 2000) || undefined,
+    drums: cleanDrums(body.drums),
   }
 }
 

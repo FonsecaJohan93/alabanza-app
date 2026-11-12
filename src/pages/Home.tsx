@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { groupBySection, isToday, longDate, upcomingSunday, useService } from '../lib/service'
 import { useSession, useSongs } from '../lib/store'
+import { DrumButton } from '../components/DrumButton'
 import { ErrorBox, Header } from '../components/ui'
 
 export default function Home() {
@@ -48,6 +49,7 @@ export default function Home() {
                             {s.artist && <p className="truncate text-sm text-slate-500">{s.artist}</p>}
                           </div>
                           {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{s.key}</span>}
+                          <DrumButton song={s} />
                         </Link>
                       </li>
                     )

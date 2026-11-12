@@ -111,7 +111,8 @@ export function capoSuggestion(key: string): { capo: number; shape: string } | n
 // ---------------------------------------------------------------- secciones
 
 const SECTION_WORDS =
-  'intro|introducci[oó]n|coro|estribillo|pre-?coro|pre coro|verso|estrofa|puente|final|outro|instrumental|interludio|solo|tag|vamp|' +
+  'intro|introducci[oó]n|coro|estribillo|pre-?coro|pre coro|pre-?estribillo|verso|estrofa|puente|final|outro|coda|instrumental|interludio|solo|tag|vamp|' +
+  '(?:primera|segunda|tercera|cuarta) parte|' +
   'chorus|pre-?chorus|verse|bridge|ending|' +
   'refr[aã]o|pr[eé]-?refr[aã]o|primeira parte|segunda parte|terceira parte|parte|ponte|introdu[cç][aã]o'
 const SECTION_RE = new RegExp(`^\\s*[\\[(]?\\s*((?:${SECTION_WORDS})\\b[^\\])]{0,20})[\\])]?\\s*:?\\s*$`, 'i')

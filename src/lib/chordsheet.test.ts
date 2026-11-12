@@ -38,6 +38,8 @@ test('nombres de sección', () => {
   assert.equal(sectionName('[Puente]'), 'Puente')
   assert.equal(sectionName('(Verso 2)'), 'Verso 2')
   assert.equal(sectionName('[Refrão]'), 'Refrão')
+  assert.equal(sectionName('[Primera Parte]'), 'Primera Parte')
+  assert.equal(sectionName('Segunda parte:'), 'Segunda parte')
   assert.equal(sectionName('Coronado de gloria'), null)
 })
 

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { capoSuggestion, transposeKey } from '../lib/chordsheet'
 import { useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
+import { DrumButton } from '../components/DrumButton'
 import { Header, TEMPO_LABEL } from '../components/ui'
 
 // Preferencias de cada persona en su teléfono (no se comparten con el equipo)
@@ -54,9 +55,12 @@ export default function SongView() {
         title={song.title}
         back="/repertorio"
         actions={
+          <>
+          <DrumButton song={song} />
           <Link to={`/cancion/${song.id}/editar`} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft">
             Editar
           </Link>
+          </>
         }
       />
 
@@ -118,7 +122,7 @@ export default function SongView() {
 
         <div className="mt-4">
           {song.content.trim() ? (
-            <ChordSheet content={song.content} semitones={semis} targetKey={key} showChords={showChords} fontSize={fontSize} />
+            <ChordSheet content={song.content} semitones={semis} targetKey={key} showChords={showChords} fontSize={fontSize} drums={song.drums} />
           ) : (
             <p className="text-slate-500">Esta canción todavía no tiene letra ni acordes.</p>
           )}

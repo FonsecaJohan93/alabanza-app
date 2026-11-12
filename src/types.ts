@@ -1,3 +1,5 @@
+import type { DrumChart } from './lib/drums.ts'
+
 export type Tempo = 'rapida' | 'media' | 'lenta'
 
 export interface Song {
@@ -15,6 +17,8 @@ export interface Song {
   sourceUrl?: string
   youtube?: string
   notes?: string
+  /** Indicaciones para la batería (feel, piezas y dinámica por sección). */
+  drums?: DrumChart
   createdAt: string
   createdBy: string
   updatedAt: string
