@@ -10,7 +10,7 @@ import { ErrorBox, Header } from '../components/ui'
 export default function Home() {
   const session = useSession()
   const songs = useSongs()
-  const { views } = useMe()
+  const { views, roles, loaded: meLoaded } = useMe()
   const members = useMembers()
   const date = upcomingSunday()
   const { service, loaded, error } = useService(date)
@@ -22,6 +22,15 @@ export default function Home() {
       <Header title="Inicio" />
       <div className="px-4 pt-5">
         <p className="text-2xl font-bold">Hola, {session?.name}</p>
+        {/* Un solo botón: primero el perfil (instrumentos); con eso listo, la configuración */}
+        {meLoaded && (
+          <Link
+            to={roles.length ? '/configuracion' : '/equipo'}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent active:brightness-95"
+          >
+            {roles.length ? 'Completar configuración' : 'Completar mi perfil'} →
+          </Link>
+        )}
         <p className="mt-1 text-slate-600">
           {isToday(date) ? 'Para hoy' : 'Para este domingo'},{' '}
           <span className="font-medium text-slate-800">{longDate(date).replace(/^domingo,? /, '')}</span>, las canciones son:
