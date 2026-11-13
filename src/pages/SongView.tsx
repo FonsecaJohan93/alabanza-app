@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { capoSuggestion, guessKey, keyView, transposeKey } from '../lib/chordsheet'
+import { capoSuggestion, guessKey, keyView, semitonesBetween, sharpKey, transposeChordPro, transposeKey } from '../lib/chordsheet'
 import { upcomingSunday, useService } from '../lib/service'
-import { savePersonal, useMe, usePersonal, useSong, useStore } from '../lib/store'
+import { savePersonal, saveSong, useMe, usePersonal, useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
 import { DrumButton } from '../components/DrumButton'
 import { VoiceButton } from '../components/VoiceButton'
@@ -35,13 +35,16 @@ function usePref<T>(key: string, initial: T): [T, (v: T) => void] {
 export default function SongView() {
   const { id } = useParams()
   const song = useSong(id)
-  const { prefs, views } = useMe()
+  const { prefs, views, isDirector } = useMe()
   const loaded = useStore((s) => s.loaded)
   const mine = usePersonal(id)
   const [trans, setTrans] = useState(0)
   // El tono en que suena: el que puso dirección para el domingo, o el de la canción
-  const { service } = useService(upcomingSunday())
-  const sundayKey = service?.items.find((i) => i.songId === id)?.key
+  const { service, save: saveSunday } = useService(upcomingSunday())
+  const sundayItem = service?.items.find((i) => i.songId === id)
+  const sundayKey = sundayItem?.key ? sharpKey(sundayItem.key) : undefined
+  const [fixing, setFixing] = useState(false)
+  const [fixError, setFixError] = useState<string | null>(null)
   const [showChords, setShowChords] = usePref('alabanza:showChords', true)
   const [fontSize, setFontSize] = usePref('alabanza:fontSize', 17)
 
@@ -53,13 +56,30 @@ export default function SongView() {
       </div>
     )
 
-  const written = song.key || guessKey(song.content)
+  const written = sharpKey(song.key || guessKey(song.content))
   const teamKey = sundayKey || written
   // Transponer para practicar: temporal, solo en esta pantalla (no se guarda ni cambia lo del equipo)
   const sounding = trans && teamKey ? transposeKey(teamKey, trans) : teamKey
   const capo = mine.capo ?? 0
   const { semis, shapeKey } = keyView(written, sounding, capo)
   const suggested = sounding ? capoSuggestion(sounding) : null
+
+  // Dirección convierte la transposición en el tono definitivo:
+  // si está en la lista del domingo, cambia el tono del domingo; si no, reescribe la canción
+  async function fixKey() {
+    if (!song || !sounding) return
+    setFixing(true)
+    setFixError(null)
+    try {
+      if (sundayItem && service) await saveSunday(service.items.map((i) => (i.songId === song.id ? { ...i, key: sounding } : i)))
+      else await saveSong({ ...song, key: sounding, content: transposeChordPro(song.content, semitonesBetween(written, sounding)) }, song)
+      setTrans(0)
+    } catch (e) {
+      setFixError((e as Error).message)
+    } finally {
+      setFixing(false)
+    }
+  }
   const stepTrans = (d: number) => setTrans(((((trans + d) % 12) + 12 + 5) % 12) - 5) // −5…+6
 
   return (
@@ -139,9 +159,21 @@ export default function SongView() {
           <span className="min-w-0 flex-1">
             Estás viendo en <b>{sounding}</b> ({trans > 0 ? `+${trans}` : trans}) · el equipo toca en <b>{teamKey}</b>. Solo para ti, no se guarda.
           </span>
-          <button onClick={() => setTrans(0)} className="shrink-0 rounded-lg bg-white px-2.5 py-1 font-semibold shadow-sm active:bg-amber-100">
-            Volver a {teamKey}
-          </button>
+          <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+            {isDirector && (
+              <button onClick={fixKey} disabled={fixing} className="rounded-lg bg-amber-600 px-2.5 py-1 font-semibold text-white shadow-sm active:bg-amber-700 disabled:opacity-50">
+                {fixing ? 'Guardando…' : sundayItem ? `Fijar ${sounding} el domingo` : `Guardar en ${sounding}`}
+              </button>
+            )}
+            <button onClick={() => setTrans(0)} className="rounded-lg bg-white px-2.5 py-1 font-semibold shadow-sm active:bg-amber-100">
+              Volver a {teamKey}
+            </button>
+          </div>
+        </div>
+      )}
+      {fixError && (
+        <div className="px-4 pt-2">
+          <ErrorBox>{fixError}</ErrorBox>
         </div>
       )}
 

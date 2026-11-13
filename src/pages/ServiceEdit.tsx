@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { longDate, useService } from '../lib/service'
 import { useMe, useMembers, useSongs } from '../lib/store'
-import { guessKey } from '../lib/chordsheet'
+import { guessKey, sharpKey } from '../lib/chordsheet'
 import type { Assignment } from '../lib/team'
 import { TeamPicker } from '../components/TeamPicker'
 import { Button, ErrorBox, Header, inputClass } from '../components/ui'
 import type { ServiceItem } from '../types'
 
 const SECTIONS = ['Alabanza', 'Adoración', 'Santa Cena', 'Ofrenda']
-const BASE_KEYS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+const BASE_KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const KEYS = [...BASE_KEYS, ...BASE_KEYS.map((k) => k + 'm')]
 
 const fold = (s: string) =>
@@ -113,12 +113,12 @@ export default function ServiceEdit() {
                     <span className="text-slate-500">Suena en</span>
                     {isDirector ? (
                       <select
-                        value={it.key ?? ''}
+                        value={it.key ? sharpKey(it.key) : ''}
                         onChange={(e) => change(items.map((x, j) => (j === i ? { ...x, key: e.target.value || undefined } : x)))}
                         className="rounded-lg bg-accent-soft px-2 py-1 font-bold text-accent"
                         aria-label={`Tono del domingo para ${s?.title ?? 'la canción'}`}
                       >
-                        <option value="">{(s?.key || (s && guessKey(s.content)) || '—') + ' (el de la canción)'}</option>
+                        <option value="">{(sharpKey(s?.key || (s ? guessKey(s.content) : '')) || '—') + ' (el de la canción)'}</option>
                         {KEYS.map((k) => (
                           <option key={k} value={k}>
                             {k}
@@ -126,7 +126,7 @@ export default function ServiceEdit() {
                         ))}
                       </select>
                     ) : (
-                      <span className="rounded-lg bg-accent-soft px-2 py-0.5 font-bold text-accent">{it.key || s?.key || '—'}</span>
+                      <span className="rounded-lg bg-accent-soft px-2 py-0.5 font-bold text-accent">{sharpKey(it.key || s?.key || '') || '—'}</span>
                     )}
                   </div>
                   <div className="mt-2 ml-7 flex flex-wrap gap-1.5">
@@ -164,7 +164,7 @@ export default function ServiceEdit() {
                       <span className="block truncate font-medium">{s.title}</span>
                       {s.artist && <span className="block truncate text-sm text-slate-500">{s.artist}</span>}
                     </span>
-                    {s.key && <span className="text-sm font-bold text-accent">{s.key}</span>}
+                    {s.key && <span className="text-sm font-bold text-accent">{sharpKey(s.key)}</span>}
                   </button>
                 </li>
               ))}

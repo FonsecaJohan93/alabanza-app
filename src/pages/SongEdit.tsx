@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { chordProToText, guessKey, semitonesBetween, textToChordPro, transposeChordPro } from '../lib/chordsheet'
+import { chordProToText, guessKey, semitonesBetween, sharpKey, textToChordPro, transposeChordPro } from '../lib/chordsheet'
+import { upcomingSunday, useService } from '../lib/service'
 import { ApiError } from '../lib/api'
-import { acceptRemote, removeSong, saveSong, useSong, useSongs } from '../lib/store'
+import { acceptRemote, removeSong, saveSong, useMe, useSong, useSongs } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
 import { Button, ErrorBox, Field, Header, inputClass, TEMPO_LABEL } from '../components/ui'
 import type { Song, SongDraft, Tempo } from '../types'
@@ -26,7 +27,12 @@ export default function SongEdit() {
 function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) {
   const navigate = useNavigate()
   const allSongs = useSongs()
-  const [draft, setDraft] = useState<SongDraft>(initial)
+  const [draft, setDraft] = useState<SongDraft>(() => ({ ...initial, key: sharpKey(initial.key) }))
+  const { isDirector } = useMe()
+  // Si la canción está en la lista del domingo, ahí está el tono en que suena
+  const sunday = useService(upcomingSunday())
+  const sundayItem = existing ? sunday.service?.items.find((i) => i.songId === existing.id) : undefined
+  const keyChanged = !!existing && draft.key !== sharpKey(initial.key)
   const [mode, setMode] = useState<Mode>('arriba')
   const [body, setBody] = useState(() => chordProToText(initial.content))
   const [tagText, setTagText] = useState(initial.tags.join(', '))
@@ -71,6 +77,10 @@ function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) 
     setError(null)
     try {
       const song = await saveSong({ ...draft, tags, content, key: draft.key || guessKey(content) }, existing)
+      // Dirección cambió el tono: el domingo también pasa a ese tono (un solo tono definitivo)
+      if (isDirector && keyChanged && sundayItem && sunday.service && sharpKey(sundayItem.key ?? '') !== draft.key) {
+        await sunday.save(sunday.service.items.map((i) => (i.songId === song.id ? { ...i, key: draft.key || undefined } : i)))
+      }
       navigate(`/cancion/${song.id}`, { replace: true })
     } catch (e) {
       const err = e as ApiError
@@ -92,7 +102,7 @@ function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) 
     }
   }
 
-  const KEYS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+  const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
   const keyOptions = [...KEYS, ...KEYS.map((k) => k + 'm')]
 
   return (
@@ -139,6 +149,16 @@ function Editor({ existing, initial }: { existing?: Song; initial: SongDraft }) 
             </Field>
           </div>
           <p className="-mt-1 text-xs text-slate-500">Cambiar el tono reescribe todos los acordes de la hoja.</p>
+          {sundayItem?.key && sharpKey(sundayItem.key) !== draft.key && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              En la lista del domingo esta canción suena en <b>{sharpKey(sundayItem.key)}</b>.{' '}
+              {isDirector
+                ? keyChanged
+                  ? `Al guardar, el domingo pasará a ${draft.key}.`
+                  : 'Si cambias el tono aquí, el domingo también cambia.'
+                : 'El tono del domingo lo cambia Dirección.'}
+            </p>
+          )}
           <Field label="Temas" hint="Separados por coma: gracia, cruz, adoración…">
             <input className={inputClass} value={tagText} onChange={(e) => setTagText(e.target.value)} />
           </Field>

@@ -80,13 +80,16 @@ test('parseChordPro', () => {
 test('transposición', () => {
   assert.equal(transposeChord('G', 2), 'A')
   assert.equal(transposeChord('D/F#', 2, 'E'), 'E/G#')
-  assert.equal(transposeChord('C', -2, 'Bb'), 'Bb')
+  assert.equal(transposeChord('C', -2), 'A#') // siempre en sostenidos
   assert.equal(transposeChord('F#m7', 1, 'G'), 'Gm7')
-  assert.equal(transposeKey('G', 3), 'Bb')
-  assert.equal(transposeKey('G', 1), 'Ab')
+  assert.equal(transposeKey('G', 3), 'A#')
+  assert.equal(transposeKey('G', 1), 'G#')
+  assert.equal(transposeKey('Dbm', 0), 'C#m')
+  assert.equal(transposeChord('Bbm7', 0), 'A#m7') // los bemoles escritos se muestran en sostenidos
+  assert.equal(transposeChord('Ebm/Bb', 0), 'D#m/A#')
   assert.equal(transposeKey('Em', 1), 'Fm')
   assert.equal(transposeChord('Xyz', 3), 'Xyz')
-  assert.equal(transposeChord('C#mD', 3, 'F'), 'EmF')
+  assert.equal(transposeChord('C#mD', 3), 'EmF')
 })
 
 test('tono y capo', () => {

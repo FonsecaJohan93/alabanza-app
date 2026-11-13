@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { sharpKey } from '../lib/chordsheet'
 import { lyricsOnly } from '../lib/chordsheet'
 import { refreshSongs, useMe, useSongs, useStore } from '../lib/store'
 import { songPath } from '../lib/team'
@@ -86,7 +87,7 @@ export default function SongList() {
                         {[s.artist, s.tempo && TEMPO_LABEL[s.tempo], s.tags.slice(0, 3).join(', ')].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{s.key}</span>}
+                    {s.key && <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-bold text-accent">{sharpKey(s.key)}</span>}
                     {views.lyrics && views.primary !== 'voces' && <VoiceButton song={s} />}
                     {views.drums && views.primary !== 'bateria' && <DrumButton song={s} />}
                   </Link>

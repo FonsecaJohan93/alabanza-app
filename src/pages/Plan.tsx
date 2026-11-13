@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as api from '../lib/api'
+import { sharpKey } from '../lib/chordsheet'
 import { nextAlternative, proposeSongs, proposeTeam, themeTags, type SongPick } from '../lib/propose'
 import { longDate, upcomingSunday } from '../lib/service'
 import { refreshMembers, useMembers, useSongs } from '../lib/store'
@@ -151,7 +152,7 @@ export default function Plan() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{p.song.title}</p>
                           <p className="truncate text-sm text-slate-500">
-                            {[p.song.artist, p.song.tags.includes('alabanza') ? 'Alabanza' : 'Adoración', p.song.key].filter(Boolean).join(' · ')}
+                            {[p.song.artist, p.song.tags.includes('alabanza') ? 'Alabanza' : 'Adoración', sharpKey(p.song.key)].filter(Boolean).join(' · ')}
                           </p>
                           {p.reasons.length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1">

@@ -51,7 +51,6 @@ export function isChordLine(line: string): boolean {
 
 const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
-const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm'])
 
 export function noteIndex(note: string): number {
   const i = SHARPS.indexOf(note)
@@ -64,25 +63,28 @@ function shiftNote(note: string, semis: number, flats: boolean): string {
   return (flats ? FLATS : SHARPS)[(((i + semis) % 12) + 12) % 12]
 }
 
-/** Transpone un tono como "G" o "Em". */
+/**
+ * Transpone un tono como "G" o "Em". El equipo prefiere los nombres en
+ * sostenidos (C#m, no Dbm), así que siempre se escriben así.
+ */
 export function transposeKey(key: string, semis: number): string {
   const m = /^([A-G][#b]?)(m?)$/.exec(key.trim())
   if (!m) return key
-  // Se elige la escritura (# o b) que es habitual para el tono de destino
-  const sharp = shiftNote(m[1], semis, false) + m[2]
-  const flat = shiftNote(m[1], semis, true) + m[2]
-  return FLAT_KEYS.has(flat) ? flat : sharp
+  return shiftNote(m[1], semis, false) + m[2]
 }
 
-/** Transpone un acorde; los que no reconoce los deja tal cual. */
-export function transposeChord(chord: string, semis: number, targetKey?: string): string {
-  if (!semis) return chord
-  const flats = targetKey ? FLAT_KEYS.has(targetKey) || /b/.test(targetKey.slice(1, 2)) : false
+/** El mismo tono escrito en sostenidos: "Ebm" → "D#m", "Bb" → "A#". */
+export const sharpKey = (key: string) => (key ? transposeKey(key, 0) : key)
+
+/** Transpone un acorde (siempre en sostenidos); los que no reconoce los deja tal cual. */
+export function transposeChord(chord: string, semis: number, _targetKey?: string): string {
+  // Sin transponer, igual se pasan los bemoles a sostenidos ("Bb" → "A#")
+  if (!semis && !/^[A-G]b|\/[A-G]b|[A-G]b/.test(chord)) return chord
   // Escritura rara ("C#mD"): se mueve cada nota que aparezca
-  if (!isChord(chord)) return looksLikeChord(chord) ? chord.replace(/[A-G][#b]?/g, (n) => shiftNote(n, semis, flats)) : chord
+  if (!isChord(chord)) return looksLikeChord(chord) ? chord.replace(/[A-G][#b]?/g, (n) => shiftNote(n, semis, false)) : chord
   return chord
-    .replace(/^([A-G][#b]?)/, (n) => shiftNote(n, semis, flats))
-    .replace(/\/([A-G][#b]?)$/, (_, n) => '/' + shiftNote(n, semis, flats))
+    .replace(/^([A-G][#b]?)/, (n) => shiftNote(n, semis, false))
+    .replace(/\/([A-G][#b]?)$/, (_, n) => '/' + shiftNote(n, semis, false))
 }
 
 /** Tono probable: el del primer acorde de la canción. */
