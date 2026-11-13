@@ -210,7 +210,7 @@ export function RhythmPlay({ id, pattern, bpm, meter, label = 'Ritmo' }: { id: s
 }
 
 /** 🔔 Campana del metrónomo: encendida suma el clic; apagada, batería pura. */
-export function ClickToggle({ className = '' }: { className?: string }) {
+export function ClickToggle({ className = '', compact = false }: { className?: string; compact?: boolean }) {
   const on = useClickOn()
   return (
     <button
@@ -218,11 +218,12 @@ export function ClickToggle({ className = '' }: { className?: string }) {
         e.stopPropagation()
         setClickOn(!on)
       }}
-      className={`rounded-xl px-3 py-2 text-sm font-semibold ${on ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' : 'bg-panel text-slate-500'} ${className}`}
+      className={`rounded-xl ${compact ? 'grid h-9 w-9 place-items-center' : 'px-3 py-2'} text-sm font-semibold ${on ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' : 'bg-panel text-slate-500'} ${className}`}
       aria-pressed={on}
-      title={on ? 'Se oye la campana del metrónomo' : 'Solo batería, sin campana'}
+      aria-label={on ? 'Sonido del metrónomo encendido' : 'Sonido del metrónomo apagado'}
+      title={on ? 'Se oye la campana del metrónomo' : 'Sin sonido (solo luces)'}
     >
-      🔔 {on ? 'Campana' : 'Sin campana'}
+      {compact ? <span className={on ? '' : 'opacity-40 grayscale'}>🔔</span> : `🔔 ${on ? 'Campana' : 'Sin campana'}`}
     </button>
   )
 }

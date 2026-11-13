@@ -50,6 +50,7 @@ export function ChordSheet({
   columns = false,
   drumIcons,
   onChord,
+  pagesTop = '8.5rem',
 }: {
   content: string
   semitones?: number
@@ -63,6 +64,8 @@ export function ChordSheet({
   drumIcons?: boolean
   /** Tocar un acorde (ya transpuesto) para ver cómo se pone. */
   onChord?: (chord: string) => void
+  /** Alto de lo que va arriba de la hoja (para que las columnas quepan en pantalla). */
+  pagesTop?: string
 }) {
   const lines = useMemo(() => parseChordPro(content), [content])
   const blocks = useMemo(() => blocksOf(lines), [lines])
@@ -141,7 +144,7 @@ export function ChordSheet({
   return (
     <div
       className={`sheet leading-snug ${showChords ? '' : 'no-chords'} ${columns ? 'pages' : ''} ${onChord ? 'tappable' : ''}`}
-      style={{ fontSize, ['--pages-top' as string]: '8.5rem' }}
+      style={{ fontSize, ['--pages-top' as string]: pagesTop }}
       onClick={
         onChord &&
         ((e) => {

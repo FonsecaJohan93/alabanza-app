@@ -16,6 +16,7 @@ import Plan from './pages/Plan'
 import Rhythms from './pages/Rhythms'
 import NewSong from './pages/NewSong'
 import SongEdit from './pages/SongEdit'
+import Stage from './pages/Stage'
 
 export default function App() {
   const { pathname } = useLocation()
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/perfil" element={<Profile />} />
           <Route path="/planear" element={<Plan />} />
           <Route path="/ritmos" element={<Rhythms />} />
+          <Route path="/tarima" element={<Stage />} />
           <Route path="/configuracion" element={<Navigate to="/perfil" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

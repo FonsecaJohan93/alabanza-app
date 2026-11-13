@@ -32,6 +32,30 @@ function usePulse(bpm: number, running: boolean) {
   return beat
 }
 
+/**
+ * Pulso de la canción: si la campana 🔔 está encendida suena el metrónomo y
+ * las luces siguen al sonido (así no se desfasan); si no, solo luces.
+ */
+function useMetronome(on: boolean, bpm: number, beats: number) {
+  const click = useClickOn()
+  const playing = usePlaying()
+  const sounding = playing?.id === 'pulse'
+  const bpmRef = useRef(bpm)
+  bpmRef.current = bpm
+  useEffect(() => {
+    if (on && click && bpm && !playing) void playRhythm('pulse', () => ({ steps: beats, hits: {} }), () => bpmRef.current, 1, true)
+    if ((!on || !click) && sounding) stopRhythm()
+  }, [on, click, bpm, beats, playing, sounding])
+  // Si cambia el compás mientras suena, se reinicia
+  useEffect(() => {
+    if (sounding) stopRhythm()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [beats])
+  const visual = usePulse(bpm, on && !sounding)
+  if (sounding && playing.step >= 0) return { inBar: playing.step % beats, hit: playing.step }
+  return { inBar: visual < 0 ? -1 : visual % beats, hit: visual }
+}
+
 /** Redoblante con la baqueta; la baqueta "pega" cada vez que cambia `hit`. */
 function SnareHit({ hit, accent, ms }: { hit: number; accent: boolean; ms: number }) {
   return (
@@ -61,8 +85,7 @@ function SnareHit({ hit, accent, ms }: { hit: number; accent: boolean; ms: numbe
 
 /** Barra fija abajo con la baqueta y las luces de cada tiempo del compás. */
 function PulseBar({ bpm, beats, onStop }: { bpm: number; beats: number; onStop: () => void }) {
-  const beat = usePulse(bpm, true)
-  const inBar = beat < 0 ? -1 : beat % beats
+  const { inBar, hit: beat } = useMetronome(true, bpm, beats)
   const ms = Math.min(260, (60000 / bpm) * 0.8)
   return createPortal(
     <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
@@ -81,6 +104,7 @@ function PulseBar({ bpm, beats, onStop }: { bpm: number; beats: number; onStop: 
           ))}
         </div>
         <span className="text-sm font-semibold text-slate-600 tabular-nums">{bpm}</span>
+        <ClickToggle compact />
         <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-black/5 text-slate-600 active:bg-black/10" aria-label="Detener pulso">
           ■
         </button>
@@ -132,16 +156,7 @@ export function BigPulse({ bpm, feel, autoStart = false }: { bpm?: number; feel?
     if (autoStart) setOn(true)
   }, [autoStart, bpm])
   const beats = beatsPerBar(feel)
-  const beat = usePulse(bpm ?? 0, on && !!bpm)
-  // Con la campana encendida, el pulso también suena (metrónomo)
-  const click = useClickOn()
-  const playing = usePlaying()
-  const pulseSounding = playing?.id === 'pulse'
-  useEffect(() => {
-    if (on && click && bpm && !playing) void playRhythm('pulse', () => ({ steps: beats, hits: {} }), bpm, 1, true)
-    if ((!on || !click) && pulseSounding) stopRhythm()
-  }, [on, click, bpm, beats, playing, pulseSounding])
-  const inBar = beat < 0 ? -1 : beat % beats
+  const { inBar } = useMetronome(on && !!bpm, bpm ?? 0, beats)
   return (
     <section className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-panel p-4" aria-label="Tempo">
       <button
