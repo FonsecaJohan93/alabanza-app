@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { capoSuggestion, guessKey, keyView, semitonesBetween, sharpKey, transposeChordPro, transposeKey } from '../lib/chordsheet'
+import { capoSuggestion, guessKey, isChord, keyView, parseChordPro, semitonesBetween, sharpKey, transposeChord, transposeChordPro, transposeKey } from '../lib/chordsheet'
+import { ChordPanel } from '../components/ChordPanel'
 import { upcomingSunday, useService } from '../lib/service'
 import { savePersonal, saveSong, useMe, usePersonal, useSong, useStore } from '../lib/store'
 import { ChordSheet } from '../components/ChordSheet'
@@ -43,6 +44,7 @@ export default function SongView() {
   const { service, save: saveSunday } = useService(upcomingSunday())
   const sundayItem = service?.items.find((i) => i.songId === id)
   const sundayKey = sundayItem?.key ? sharpKey(sundayItem.key) : undefined
+  const [chordOpen, setChordOpen] = useState<string | null>(null)
   const [fixing, setFixing] = useState(false)
   const [fixError, setFixError] = useState<string | null>(null)
   const [showChords, setShowChords] = usePref('alabanza:showChords', true)
@@ -63,6 +65,15 @@ export default function SongView() {
   const capo = mine.capo ?? 0
   const { semis, shapeKey } = keyView(written, sounding, capo)
   const suggested = sounding ? capoSuggestion(sounding) : null
+  // Los acordes de la canción, como se ven en la hoja (con transposición y capo), sin repetir
+  const songChords = (() => {
+    const seen = new Set<string>()
+    for (const l of parseChordPro(song.content)) {
+      const cs = l.type === 'chords' ? l.chords : l.type === 'lyrics' ? l.parts.map((p) => p.chord).filter((c): c is string => !!c) : []
+      for (const c of cs) if (isChord(c)) seen.add(transposeChord(c, semis, shapeKey))
+    }
+    return [...seen]
+  })()
 
   // Dirección convierte la transposición en el tono definitivo:
   // si está en la lista del domingo, cambia el tono del domingo; si no, reescribe la canción
@@ -205,7 +216,20 @@ export default function SongView() {
 
         <div className="mt-4">
           {song.content.trim() ? (
-            <ChordSheet content={song.content} semitones={semis} targetKey={shapeKey} showChords={showChords} fontSize={fontSize} drums={song.drums} columns />
+            <>
+              {showChords && songChords.length > 0 && <p className="mb-2 text-xs text-slate-400">Toca un acorde para ver cómo se pone en la guitarra.</p>}
+              <ChordSheet
+                content={song.content}
+                semitones={semis}
+                targetKey={shapeKey}
+                showChords={showChords}
+                fontSize={fontSize}
+                drums={song.drums}
+                columns
+                onChord={setChordOpen}
+              />
+              {chordOpen && <ChordPanel chords={songChords} initial={chordOpen} capo={capo} onClose={() => setChordOpen(null)} />}
+            </>
           ) : (
             <p className="text-slate-500">Esta canción todavía no tiene letra ni acordes.</p>
           )}

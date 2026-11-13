@@ -36,6 +36,10 @@ export interface DrumSection {
   note?: string
   /** Ritmo elegido para esta sección (id de la biblioteca de la canción). */
   rhythm?: string
+  /** Ritmo de la biblioteca del equipo que Dirección propone a la batería. */
+  proposed?: string
+  /** Quién lo propuso (nombre). */
+  proposedBy?: string
   /** (Antiguo) ritmo guardado dentro de la sección; se pasa a la biblioteca. */
   pattern?: Pattern
 }
@@ -89,7 +93,16 @@ export function cleanDrums(v: unknown): DrumChart | undefined {
         rhythms.push({ id: rhythms.some((x) => x.id === id) ? `r${Date.now().toString(36)}` : id, name: `Ritmo ${rhythms.length + 1}`, pattern: legacy })
         rhythm = rhythms[rhythms.length - 1].id
       }
-      return { name, parts: [...new Set(parts)], dynamic, note: str(r.note, 300) || undefined, rhythm }
+      const proposed = typeof r.proposed === 'string' && /^[a-z0-9]{1,20}$/.test(r.proposed) ? r.proposed : undefined
+      return {
+        name,
+        parts: [...new Set(parts)],
+        dynamic,
+        note: str(r.note, 300) || undefined,
+        rhythm,
+        proposed,
+        proposedBy: proposed ? str(r.proposedBy, 40) || undefined : undefined,
+      }
     })
     .filter((s): s is DrumSection => !!s)
   const chart: DrumChart = { feel: str(o.feel, 40) || undefined, note: str(o.note, 1000) || undefined, sections, rhythms: rhythms.length ? rhythms : undefined }
@@ -140,4 +153,35 @@ export function chartFromSong(content: string): DrumChart {
   }
   if (!sections.length) sections.push({ name: 'Verso', parts: [] }, { name: 'Coro', parts: [] })
   return { sections }
+}
+
+/**
+ * Solo Dirección propone ritmos: si quien guarda no es de Dirección, las
+ * propuestas quedan como estaban (por nombre de sección).
+ */
+export function keepProposals(next: DrumChart | undefined, current: DrumChart | undefined): DrumChart | undefined {
+  if (!next) return next
+  const key = (n: string) => sectionKey(n)
+  const old = new Map((current?.sections ?? []).map((s) => [key(s.name), s]))
+  return {
+    ...next,
+    sections: next.sections.map((s) => {
+      const o = old.get(key(s.name))
+      return { ...s, proposed: o?.proposed, proposedBy: o?.proposedBy }
+    }),
+  }
+}
+
+/** Dirección guardó: las propuestas nuevas o cambiadas quedan a su nombre. */
+export function stampProposals(next: DrumChart | undefined, current: DrumChart | undefined, by: string): DrumChart | undefined {
+  if (!next) return next
+  const old = new Map((current?.sections ?? []).map((s) => [sectionKey(s.name), s]))
+  return {
+    ...next,
+    sections: next.sections.map((s) => {
+      const o = old.get(sectionKey(s.name))
+      if (!s.proposed) return { ...s, proposedBy: undefined }
+      return { ...s, proposedBy: o?.proposed === s.proposed ? (o.proposedBy ?? by) : by }
+    }),
+  }
 }

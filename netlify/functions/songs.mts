@@ -1,8 +1,8 @@
 import type { Config, Context } from '@netlify/functions'
 import { randomBytes } from 'node:crypto'
-import { json, songs, userFromRequest } from '../lib/auth.mts'
+import { json, songs, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
 import type { Song } from '../../src/types.ts'
-import { cleanDrums } from '../../src/lib/drums.ts'
+import { cleanDrums, keepProposals, stampProposals } from '../../src/lib/drums.ts'
 
 // El repertorio es compartido por todo el equipo: una entrada por canción.
 // Al borrar solo se marca como borrada, por si alguien se equivoca.
@@ -70,6 +70,11 @@ export default async (req: Request, context: Context) => {
     }
     const data = clean(body)
     if (typeof data === 'string') return json({ error: data }, 400)
+    // Los ritmos propuestos a la batería solo los cambia Dirección
+    const me = (await users().get(username, { type: 'json' })) as UserRecord | null
+    data.drums = me?.roles?.includes('direccion')
+      ? stampProposals(data.drums, current.drums, me.name || username)
+      : keepProposals(data.drums, current.drums)
     const song: Song = { ...current, ...data, updatedAt: new Date().toISOString(), updatedBy: username }
     await store.setJSON(id, song)
     return json({ song })

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { blocksOf, parseChordPro } from '../lib/chordsheet'
 import { chartFromSong, cleanDrums, drumsFor, DYNAMICS, FEELS, sectionKey, type DrumChart, type Dynamic } from '../lib/drums'
-import { meterOf, type LibraryRhythm } from '../lib/rhythm'
+import { meterOf } from '../lib/rhythm'
 import { saveSong, savePersonal, useMe, usePersonal, useRhythms, useSong, useStore } from '../lib/store'
 import type { Song } from '../types'
 import { DynamicIcon } from '../components/DrumIcons'
@@ -16,13 +16,20 @@ const dynLabel = (d: Dynamic) => DYNAMICS.find((x) => x.id === d)?.label ?? d
 /** Clave de una sección para guardar mi ritmo: "Coro 2" y "CORO" → "coro". */
 const keyOf = (name: string) => sectionKey(name.replace(/\s*\d+$/, ''))
 
-/** Mi ritmo para cada sección (de la biblioteca del equipo). */
-function useMyRhythms(song: Song) {
+/**
+ * El ritmo que suena en cada sección: el que yo elegí, o si no elegí, el que
+ * propone Dirección. "none" = elegí no tener ritmo.
+ */
+function useSectionRhythms(song: Song, chart: DrumChart) {
   const library = useRhythms()
   const mine = usePersonal(song.id)
-  return (sectionName: string): LibraryRhythm | undefined => {
-    const id = mine.rhythms?.[keyOf(sectionName)]
-    return id ? library.find((r) => r.id === id) : undefined
+  const find = (id?: string) => (id ? library.find((r) => r.id === id) : undefined)
+  return (sectionName: string) => {
+    const own = mine.rhythms?.[keyOf(sectionName)]
+    const sec = drumsFor(chart, sectionName)
+    const proposed = find(sec?.proposed)
+    const rhythm = own === 'none' ? undefined : own ? find(own) : proposed
+    return { rhythm, proposed, proposedBy: sec?.proposedBy, fromProposal: !own && !!proposed }
   }
 }
 
@@ -68,11 +75,11 @@ export default function DrumPage() {
 
 function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; onEdit: () => void }) {
   const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
-  const rhythmFor = useMyRhythms(song)
+  const rhythmsFor = useSectionRhythms(song, chart)
   const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
   const anyRhythm = blocks.some((b) => {
     const l = b.lines[0]?.line
-    return l?.type === 'section' && !!rhythmFor(l.name)
+    return l?.type === 'section' && !!rhythmsFor(l.name).rhythm
   })
 
   return (
@@ -100,7 +107,8 @@ function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; on
               const name = first?.type === 'section' ? first.name : undefined
               const lyrics = b.lines.flatMap((l) => (l.line.type === 'lyrics' ? [l.line.parts.map((p) => p.text).join('').trim()] : [])).filter(Boolean)
               const d = name ? drumsFor(chart, name) : undefined
-              const r = name ? rhythmFor(name) : undefined
+              const info = name ? rhythmsFor(name) : undefined
+              const r = info?.rhythm
               return (
                 <div key={b.start} className="mb-3 break-inside-avoid rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
                   {name && (
@@ -114,6 +122,15 @@ function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; on
                       )}
                       <span className="flex-1" />
                       {r && <RhythmPlay id={`sec-${b.start}`} pattern={r.pattern} bpm={song.bpm ?? r.bpm} meter={r.meter} label={r.name} />}
+                      {info?.proposed && (
+                        <span className="basis-full text-right text-[11px] text-slate-500">
+                          {info.fromProposal
+                            ? `Propuesto por ${info.proposedBy ?? 'dirección'}`
+                            : info.proposed.id !== r?.id
+                              ? `${info.proposedBy ?? 'Dirección'} propone: ${info.proposed.name}`
+                              : `También lo propone ${info.proposedBy ?? 'dirección'}`}
+                        </span>
+                      )}
                     </div>
                   )}
                   {lyrics.length ? (
@@ -144,7 +161,7 @@ function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; on
 function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
   const library = useRhythms()
   const mine = usePersonal(song.id)
-  const { roles } = useMe()
+  const { roles, isDirector } = useMe()
   const canCreate = roles.includes('direccion') || roles.includes('bateria')
   const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
   // Secciones en el orden de la canción (sin repetir); y las que solo estén en la hoja de batería
@@ -158,6 +175,10 @@ function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
   const [feel, setFeel] = useState<string | undefined>(chart.feel)
   const [dyn, setDyn] = useState<Record<string, Dynamic | undefined>>(() => Object.fromEntries(names.map((n) => [keyOf(n), drumsFor(chart, n)?.dynamic])))
   const [rhy, setRhy] = useState<Record<string, string>>(() => ({ ...(mine.rhythms ?? {}) }))
+  // Lo que Dirección propone a la batería (de la canción, para todos)
+  const [prop, setProp] = useState<Record<string, string>>(() =>
+    Object.fromEntries(names.map((n) => [keyOf(n), drumsFor(chart, n)?.proposed ?? ''])),
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const tap = useTapTempo(setBpm)
@@ -169,7 +190,11 @@ function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
     setError(null)
     try {
       // Matiz, BPM y feel: de la canción (para todo el equipo). Lo demás de cada sección se conserva.
-      const sections = names.map((n) => ({ ...(drumsFor(chart, n) ?? { name: n, parts: [] }), dynamic: dyn[keyOf(n)] }))
+      const sections = names.map((n) => ({
+        ...(drumsFor(chart, n) ?? { name: n, parts: [] }),
+        dynamic: dyn[keyOf(n)],
+        ...(isDirector ? { proposed: prop[keyOf(n)] || undefined } : {}),
+      }))
       const others = chart.sections.filter((s) => !names.some((n) => keyOf(n) === keyOf(s.name)))
       const drums: DrumChart = { ...chart, feel, sections: [...sections, ...others] }
       if (bpm !== song.bpm || JSON.stringify(drums) !== JSON.stringify(chart)) await saveSong({ ...song, bpm, drums }, song)
@@ -221,7 +246,14 @@ function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
       <ol className="space-y-2">
         {names.map((n) => {
           const k = keyOf(n)
-          const r = library.find((x) => x.id === rhy[k])
+          const proposed = library.find((x) => x.id === prop[k])
+          const r = rhy[k] === 'none' ? undefined : (library.find((x) => x.id === rhy[k]) ?? (rhy[k] ? undefined : proposed))
+          const libOptions = options.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+              {x.meter !== songMeter ? ` (${x.meter})` : ''}
+            </option>
+          ))
           return (
             <li key={k} className="rounded-2xl bg-panel p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -235,15 +267,26 @@ function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
                   className="max-w-[60%] rounded-lg bg-accent-soft px-2 py-1 text-sm font-semibold text-accent disabled:opacity-50"
                   aria-label={`Ritmo para ${n}`}
                 >
-                  <option value="">Sin ritmo</option>
-                  {options.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                      {x.meter !== songMeter ? ` (${x.meter})` : ''}
-                    </option>
-                  ))}
+                  <option value="">{proposed ? `La de dirección (${proposed.name})` : 'Sin ritmo'}</option>
+                  {proposed && <option value="none">Sin ritmo</option>}
+                  {libOptions}
                 </select>
               </div>
+              {isDirector && (
+                <label className="mt-2 flex items-center gap-2 rounded-xl bg-white/70 px-2 py-1.5">
+                  <span className="flex-1 text-xs font-medium text-slate-600">Propongo a la batería</span>
+                  <select
+                    value={prop[k] ?? ''}
+                    onChange={(e) => setProp({ ...prop, [k]: e.target.value })}
+                    disabled={!library.length}
+                    className="max-w-[60%] rounded-lg bg-amber-50 px-2 py-1 text-sm font-semibold text-amber-900 disabled:opacity-50"
+                    aria-label={`Ritmo que propongo para ${n}`}
+                  >
+                    <option value="">Nada</option>
+                    {libOptions}
+                  </select>
+                </label>
+              )}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {DYNAMICS.map(({ id, label }) => {
                   const on = dyn[k] === id
@@ -264,7 +307,10 @@ function SectionsEditor({ song, onDone }: { song: Song; onDone: () => void }) {
           )
         })}
       </ol>
-      <p className="text-xs text-slate-500">El ritmo de cada sección se guarda para ti; el matiz, el BPM y el feel son de la canción, para todo el equipo.</p>
+      <p className="text-xs text-slate-500">
+        El ritmo de cada sección se guarda para ti; si no eliges, suena el que propone dirección. El matiz, el BPM, el feel
+        {isDirector ? ' y tus propuestas' : ''} son de la canción, para todo el equipo.
+      </p>
       {error && <ErrorBox>{error}</ErrorBox>}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-ink/95 px-4 pt-3 backdrop-blur" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>

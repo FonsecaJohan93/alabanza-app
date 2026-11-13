@@ -45,6 +45,15 @@ body {
   min-height: 1.15em;
   padding-right: 0.35em;
 }
+.sheet.tappable [data-chord] {
+  cursor: pointer;
+  border-radius: 0.3em;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet.tappable [data-chord]:active {
+  background: var(--color-accent-soft);
+}
+
 .sheet.no-chords .c {
   display: none;
 }

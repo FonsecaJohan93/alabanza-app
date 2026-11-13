@@ -49,6 +49,7 @@ export function ChordSheet({
   drums,
   columns = false,
   drumIcons,
+  onChord,
 }: {
   content: string
   semitones?: number
@@ -60,6 +61,8 @@ export function ChordSheet({
   columns?: boolean
   /** Mostrar los iconos de batería en las secciones (por defecto, solo con acordes). */
   drumIcons?: boolean
+  /** Tocar un acorde (ya transpuesto) para ver cómo se pone. */
+  onChord?: (chord: string) => void
 }) {
   const lines = useMemo(() => parseChordPro(content), [content])
   const blocks = useMemo(() => blocksOf(lines), [lines])
@@ -101,7 +104,9 @@ export function ChordSheet({
         return showChords ? (
           <div key={i} className="flex flex-wrap gap-x-4 font-bold text-accent">
             {line.chords.map((c, j) => (
-              <span key={j}>{t(c)}</span>
+              <span key={j} data-chord={t(c)}>
+                {t(c)}
+              </span>
             ))}
           </div>
         ) : null
@@ -117,7 +122,9 @@ export function ChordSheet({
                 <span key={j} className="whitespace-nowrap">
                   {g.map((seg, k) => (
                     <span key={k} className="w">
-                      <span className="c">{seg.chord ? t(seg.chord) : ''}</span>
+                      <span className="c" data-chord={seg.chord ? t(seg.chord) : undefined}>
+                        {seg.chord ? t(seg.chord) : ''}
+                      </span>
                       <span>{seg.text || (seg.chord ? ' ' : '')}</span>
                     </span>
                   ))}
@@ -132,7 +139,17 @@ export function ChordSheet({
 
   // Cada estrofa es un bloque que no se parte: en tablet horizontal la hoja va a dos columnas
   return (
-    <div className={`sheet leading-snug ${showChords ? '' : 'no-chords'} ${columns ? 'pages' : ''}`} style={{ fontSize, ['--pages-top' as string]: '8.5rem' }}>
+    <div
+      className={`sheet leading-snug ${showChords ? '' : 'no-chords'} ${columns ? 'pages' : ''} ${onChord ? 'tappable' : ''}`}
+      style={{ fontSize, ['--pages-top' as string]: '8.5rem' }}
+      onClick={
+        onChord &&
+        ((e) => {
+          const c = (e.target as HTMLElement).closest<HTMLElement>('[data-chord]')?.dataset.chord
+          if (c) onChord(c)
+        })
+      }
+    >
       {blocks.map((b) => {
         const rendered = b.lines.map(({ line, index }) => renderLine(line, index)).filter(Boolean)
         return rendered.length ? (
