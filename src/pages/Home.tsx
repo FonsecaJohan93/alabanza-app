@@ -22,7 +22,14 @@ export default function Home() {
     <div className="pb-10">
       <Header title="Inicio" />
       <div className="px-4 pt-5">
-        <p className="text-2xl font-bold">Hola, {session?.name}</p>
+        <div className="flex items-center gap-3">
+          <p className="min-w-0 flex-1 text-2xl font-bold">Hola, {session?.name}</p>
+          {items.length > 0 && (
+            <Link to="/tarima" className="shrink-0 rounded-xl bg-accent px-3.5 py-2 text-sm font-semibold text-white active:brightness-110">
+              Modo tarima
+            </Link>
+          )}
+        </div>
         {/* Aviso solo para quien aún no marcó sus instrumentos */}
         {meLoaded && !roles.length && (
           <Link
@@ -62,19 +69,6 @@ export default function Home() {
               </div>
             ) : (
               <div className="mt-5 space-y-5">
-                <Link
-                  to="/tarima"
-                  className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-sm active:bg-slate-800"
-                >
-                  <span className="text-2xl" aria-hidden="true">
-                    🎤
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">Modo tarima</span>
-                    <span className="block text-sm text-white/70">Todas las canciones en pestañas, con relojes. Ideal en tablet horizontal.</span>
-                  </span>
-                  <span aria-hidden="true">→</span>
-                </Link>
                 {groupBySection(items).map((g, gi) => (
                   <section key={gi}>
                     {g.section && <h2 className="mb-2 text-xs font-bold tracking-wider text-slate-500 uppercase">{g.section}</h2>}

@@ -5,8 +5,9 @@ import { useMe, useSong, useStore } from '../lib/store'
 import { CuePill } from '../components/Cue'
 import { Header } from '../components/ui'
 import { PulseButton } from '../components/Pulse'
+import type { Song } from '../types'
 
-function usePref(key: string, initial: number): [number, (v: number) => void] {
+export function usePref(key: string, initial: number): [number, (v: number) => void] {
   const [v, setV] = useState(() => {
     try {
       return Number(localStorage.getItem(key)) || initial
@@ -55,8 +56,6 @@ export default function VocalView() {
   const [fontSize, setFontSize] = usePref('alabanza:vocalFont', 26)
   useWakeLock()
 
-  const blocks = useMemo(() => blocksOf(parseChordPro(song?.content ?? '')), [song?.content])
-
   if (!song)
     return (
       <div>
@@ -88,7 +87,16 @@ export default function VocalView() {
         }
       />
 
-      <div className="pages px-5 pt-4 leading-snug" style={{ fontSize, ['--pages-top' as string]: '4.5rem' }}>
+      <VocalSheet song={song} fontSize={fontSize} pagesTop="4.5rem" />
+    </div>
+  )
+}
+
+/** La letra en grande por secciones, con los indicadores del equipo. */
+export function VocalSheet({ song, fontSize, pagesTop }: { song: Song; fontSize: number; pagesTop: string }) {
+  const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
+  return (
+      <div className="pages px-5 pt-4 leading-snug" style={{ fontSize, ['--pages-top' as string]: pagesTop }}>
         {blocks.map((b) => {
           const first = b.lines[0]?.line
           const section = first?.type === 'section' ? first.name : undefined
@@ -117,6 +125,5 @@ export default function VocalView() {
           )
         })}
       </div>
-    </div>
   )
 }

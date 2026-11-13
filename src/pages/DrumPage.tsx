@@ -73,7 +73,7 @@ export default function DrumPage() {
   )
 }
 
-function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; onEdit: () => void }) {
+export function Board({ song, autoPulse, onEdit, pagesTop = '4.5rem' }: { song: Song; autoPulse: boolean; onEdit?: () => void; pagesTop?: string }) {
   const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
   const rhythmsFor = useSectionRhythms(song, chart)
   const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
@@ -86,7 +86,7 @@ function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; on
     <div className="space-y-4 px-4 pt-4 md:landscape:mx-auto md:landscape:max-w-4xl">
       <BigPulse bpm={song.bpm} feel={chart.feel} autoStart={autoPulse} />
       {chart.feel && <p className="-mt-2 px-1 text-sm text-slate-500">Feel: {chart.feel}</p>}
-      {!anyRhythm && (
+      {!anyRhythm && onEdit && (
         <button onClick={onEdit} className="w-full rounded-2xl bg-accent-soft p-3 text-sm font-semibold text-accent">
           Elegir el ritmo y el matiz de cada sección →
         </button>
@@ -95,7 +95,7 @@ function Board({ song, autoPulse, onEdit }: { song: Song; autoPulse: boolean; on
       <section>
         <h2 className="mb-2 px-1 text-xs font-bold tracking-wider text-slate-500 uppercase">Letra y ritmos por sección</h2>
         {song.content.trim() ? (
-          <div className="pages space-y-1" style={{ ['--pages-top' as string]: '4.5rem' }}>
+          <div className="pages space-y-1" style={{ ['--pages-top' as string]: pagesTop }}>
             {blocks.map((b) => {
               const first = b.lines[0]?.line
               if (first?.type === 'cue')
