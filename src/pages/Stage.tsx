@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { capoSuggestion, guessKey, keyView, sharpKey, transposeKey } from '../lib/chordsheet'
 import { upcomingSunday, useService } from '../lib/service'
@@ -7,29 +7,11 @@ import { useMe, usePersonal, useSongs } from '../lib/store'
 import type { ServiceItem, Song } from '../types'
 import { PulseButton } from '../components/Pulse'
 import { SongBody } from '../components/SongBody'
+import { AutoScrollControl, useAutoScroll, useWakeLock } from '../components/SheetScroll'
 import { useFontSize, useShow, ViewMenu } from '../components/ViewMenu'
 import type { Show } from '../lib/show'
 import * as api from '../lib/api'
 import { currentLive, LIVE_PRESETS, type LiveMessage } from '../lib/live'
-
-/** Mantiene la pantalla encendida mientras se está en tarima (si el navegador lo permite). */
-function useWakeLock() {
-  useEffect(() => {
-    type Lock = { release: () => Promise<void> }
-    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<Lock> } }
-    if (!nav.wakeLock) return
-    let lock: Lock | null = null
-    const get = () => {
-      if (document.visibilityState === 'visible') nav.wakeLock!.request('screen').then((l) => (lock = l), () => {})
-    }
-    get()
-    document.addEventListener('visibilitychange', get)
-    return () => {
-      document.removeEventListener('visibilitychange', get)
-      void lock?.release().catch(() => {})
-    }
-  }, [])
-}
 
 /** Los dos relojes: arrancan al entrar y siguen aunque se recargue la página. */
 function useStageClock(date: string, songId: string | undefined) {
@@ -206,21 +188,14 @@ export default function Stage() {
   const [fontSize, setFontSize, fontStep] = useFontSize(show.big)
   const item = items[Math.min(idx, items.length - 1)]
   const { clock, toggle, reset } = useStageClock(date, item?.songId)
-  const top = useRef<HTMLDivElement>(null)
-  const [topH, setTopH] = useState(180)
   const tabs = useRef<HTMLDivElement>(null)
+  const page = useRef<HTMLDivElement>(null)
   useWakeLock()
-
-  useLayoutEffect(() => {
-    const el = top.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setTopH(el.offsetHeight))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [items.length])
+  const auto = useAutoScroll(item?.songId)
 
   useEffect(() => {
     tabs.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+    page.current?.scrollTo({ top: 0 }) // cada canción empieza arriba
   }, [idx])
 
   if (!items.length)
@@ -236,8 +211,8 @@ export default function Stage() {
   const song = byId.get(item.songId)!
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-ink">
-      <div ref={top} className="sticky top-0 z-10 border-b border-line bg-ink/95 backdrop-blur">
+    <div ref={page} className="fixed inset-0 z-30 flex flex-col overflow-y-auto bg-ink">
+      <div data-pin="top" className="sticky top-0 z-10 border-b border-line bg-ink/95 backdrop-blur">
         {/* Pestañas: una por canción */}
         <div className="flex items-center gap-2 px-3 pt-2">
           <Link to="/" className="shrink-0 rounded-xl bg-panel px-3 py-2 text-sm font-semibold text-slate-600" aria-label="Salir del modo tarima">
@@ -291,6 +266,7 @@ export default function Stage() {
             showChords={show.chords}
           />
           {!show.tempo && <PulseButton key={'p' + song.id} bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />}
+          {song.content.trim() && <AutoScrollControl auto={auto} big />}
           <div className="flex rounded-xl bg-panel text-sm">
             <button onClick={() => setFontSize(fontSize - fontStep)} className="px-2.5 py-2" aria-label="Letra más pequeña">
               A−
@@ -316,12 +292,12 @@ export default function Stage() {
           fontSize={fontSize}
           show={show}
           autoPulse={prefs.autoPulse}
-          pagesTop={`${topH + 16}px`}
         />
       )}
 
       {idx < items.length - 1 && (
         <button
+          data-pin="bottom"
           onClick={() => setIdx(idx + 1)}
           className="fixed right-3 bottom-20 z-20 rounded-xl md:landscape:bottom-3 bg-accent/90 px-3 py-2 text-sm font-semibold text-white shadow-lg"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
@@ -382,7 +358,6 @@ function StageSheet({
   fontSize,
   show,
   autoPulse,
-  pagesTop,
 }: {
   song: Song
   item: ServiceItem
@@ -390,7 +365,6 @@ function StageSheet({
   fontSize: number
   show: Show
   autoPulse?: boolean
-  pagesTop: string
 }) {
   const { semis, shapeKey } = useStageKey(song, item, trans)
   const mine = usePersonal(song.id)
@@ -406,7 +380,6 @@ function StageSheet({
         targetKey={shapeKey}
         fontSize={fontSize}
         autoPulse={autoPulse}
-        pagesTop={notes ? `calc(${pagesTop} + 4rem)` : pagesTop}
       />
     </div>
   )

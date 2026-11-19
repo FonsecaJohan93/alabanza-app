@@ -11,7 +11,7 @@ export function Header({ title, back, actions }: { title: ReactNode; back?: stri
   const navigate = useNavigate()
   const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(back ?? '/', { replace: true }))
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
+    <header data-pin="top" className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
       {back ? (
         <button onClick={goBack} aria-label="Volver" className="-my-1 -ml-2 rounded-full p-2 text-slate-600 active:bg-black/5">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">

@@ -6,6 +6,7 @@ import { upcomingSunday, useService } from '../lib/service'
 import { savePersonal, saveSong, useMe, usePersonal, useSong, useStore } from '../lib/store'
 import { PulseButton } from '../components/Pulse'
 import { SongBody } from '../components/SongBody'
+import { AutoScrollControl, useAutoScroll } from '../components/SheetScroll'
 import { useFontSize, useShow, ViewMenu } from '../components/ViewMenu'
 import { ErrorBox, Header, TEMPO_LABEL } from '../components/ui'
 
@@ -27,6 +28,7 @@ export default function SongView() {
   const { show, setShow, changed, reset } = useShow(id)
   const showChords = show.chords
   const [fontSize, setFontSize, fontStep] = useFontSize(show.big)
+  const auto = useAutoScroll(id)
 
   if (!song)
     return (
@@ -86,7 +88,7 @@ export default function SongView() {
       />
 
       {/* Controles: tono, acordes on/off, tamaño de letra */}
-      <div className="sticky top-[53px] z-10 flex flex-wrap items-center gap-1.5 border-b border-line bg-ink/95 px-4 py-2 backdrop-blur">
+      <div data-pin="top" className="sticky top-[53px] z-10 flex flex-wrap items-center gap-1.5 border-b border-line bg-ink/95 px-4 py-2 backdrop-blur">
         {/* El tono lo decide dirección; aquí solo se ve. El capo es de cada uno. */}
         <div
           className={`flex items-center rounded-xl ${trans ? 'bg-amber-100 ring-1 ring-amber-300' : 'bg-panel'}`}
@@ -125,6 +127,7 @@ export default function SongView() {
         )}
         <div className="flex-1" />
         {!show.tempo && <PulseButton bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />}
+        {song.content.trim() && <AutoScrollControl auto={auto} />}
         <div className="flex rounded-xl bg-panel text-sm">
           <button onClick={() => setFontSize(fontSize - fontStep)} className="px-2 py-2" aria-label="Letra más pequeña">
             A−
@@ -193,7 +196,6 @@ export default function SongView() {
             semitones={semis}
             targetKey={shapeKey}
             fontSize={fontSize}
-            pagesTop="8.5rem"
             autoPulse={prefs.autoPulse}
             onChord={setChordOpen}
             canEditDrums={roles.includes('direccion') || roles.includes('bateria')}

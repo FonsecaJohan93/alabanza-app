@@ -88,7 +88,7 @@ function PulseBar({ bpm, beats, onStop }: { bpm: number; beats: number; onStop: 
   const { inBar, hit: beat } = useMetronome(true, bpm, beats)
   const ms = Math.min(260, (60000 / bpm) * 0.8)
   return createPortal(
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+    <div data-pin="bottom" className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="flex items-center gap-3 rounded-2xl bg-white/95 px-3 py-2 shadow-xl ring-1 ring-black/5 backdrop-blur" role="timer" aria-label={`Pulso a ${bpm} BPM`}>
         <SnareHit hit={beat} accent={inBar === 0} ms={ms} />
         <div className="flex items-center gap-2">

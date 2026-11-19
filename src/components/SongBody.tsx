@@ -40,7 +40,6 @@ export function SongBody({
   semitones,
   targetKey,
   fontSize,
-  pagesTop,
   autoPulse,
   onChord,
   canEditDrums = false,
@@ -50,8 +49,6 @@ export function SongBody({
   semitones: number
   targetKey?: string
   fontSize: number
-  /** Alto de lo que hay arriba (para las columnas en tablet horizontal). */
-  pagesTop: string
   autoPulse?: boolean
   onChord?: (chord: string) => void
   canEditDrums?: boolean
@@ -92,9 +89,6 @@ export function SongBody({
       }
     : undefined
 
-  // Con el tempo grande arriba, las columnas de la tablet son más bajas
-  const top = show.tempo ? `calc(${pagesTop} + 7.5rem)` : pagesTop
-
   return (
     <>
       {show.tempo && (
@@ -126,7 +120,6 @@ export function SongBody({
           sectionExtra={sectionExtra}
           fontSize={fontSize}
           columns
-          pagesTop={top}
           onChord={show.chords ? onChord : undefined}
         />
       ) : (
