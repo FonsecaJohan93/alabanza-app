@@ -1,155 +1,50 @@
-import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { blocksOf, parseChordPro } from '../lib/chordsheet'
-import { chartFromSong, cleanDrums, drumsFor, DYNAMICS, FEELS, sectionKey, type DrumChart, type Dynamic } from '../lib/drums'
+import { useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { chartFromSong, cleanDrums, drumsFor, DYNAMICS, FEELS, type DrumChart, type Dynamic } from '../lib/drums'
 import { meterOf } from '../lib/rhythm'
 import { saveSong, savePersonal, useMe, usePersonal, useRhythms, useSong, useStore } from '../lib/store'
 import type { Song } from '../types'
 import { DynamicIcon } from '../components/DrumIcons'
-import { useTapTempo } from '../components/DrumPanel'
-import { BigPulse } from '../components/Pulse'
 import { RhythmPlay } from '../components/RhythmEditor'
-import { VoiceButton } from '../components/VoiceButton'
+import { rhythmKey as keyOf } from '../components/SongBody'
 import { Button, ErrorBox, Header, inputClass } from '../components/ui'
 
-const dynLabel = (d: Dynamic) => DYNAMICS.find((x) => x.id === d)?.label ?? d
-/** Clave de una sección para guardar mi ritmo: "Coro 2" y "CORO" → "coro". */
-const keyOf = (name: string) => sectionKey(name.replace(/\s*\d+$/, ''))
-
-/**
- * El ritmo que suena en cada sección: el que yo elegí, o si no elegí, el que
- * propone Dirección. "none" = elegí no tener ritmo.
- */
-function useSectionRhythms(song: Song, chart: DrumChart) {
-  const library = useRhythms()
-  const mine = usePersonal(song.id)
-  const find = (id?: string) => (id ? library.find((r) => r.id === id) : undefined)
-  return (sectionName: string) => {
-    const own = mine.rhythms?.[keyOf(sectionName)]
-    const sec = drumsFor(chart, sectionName)
-    const proposed = find(sec?.proposed)
-    const rhythm = own === 'none' ? undefined : own ? find(own) : proposed
-    return { rhythm, proposed, proposedBy: sec?.proposedBy, fromProposal: !own && !!proposed }
+/** Toca el botón al ritmo de la canción y calcula el BPM. */
+function useTapTempo(onBpm: (bpm: number) => void) {
+  const taps = useRef<number[]>([])
+  return () => {
+    const now = performance.now()
+    const last = taps.current[taps.current.length - 1]
+    if (last && now - last > 2000) taps.current = []
+    taps.current = [...taps.current, now].slice(-6)
+    if (taps.current.length >= 3) {
+      const t = taps.current
+      const avg = (t[t.length - 1] - t[0]) / (t.length - 1)
+      const bpm = Math.round(60000 / avg)
+      if (bpm >= 40 && bpm <= 240) onBpm(bpm)
+    }
   }
 }
 
 /**
- * Pantalla del baterista: tempo grande y la letra por secciones con el ▶ del
- * ritmo que cada quien eligió y el matiz de la sección. Se elige en "Editar".
+ * Batería de una canción (se entra con "Editar batería" desde la canción):
+ * BPM y feel, y por sección el ritmo (mío, o el que propongo si soy dirección)
+ * y el matiz. Lo que se ve está en la canción, con el menú "Ver".
  */
 export default function DrumPage() {
   const { id } = useParams()
   const song = useSong(id)
   const loaded = useStore((s) => s.loaded)
-  const { prefs, views } = useMe()
-  const [editing, setEditing] = useState(false)
-
-  if (!song)
-    return (
-      <div>
-        <Header title="Batería" back="/" />
-        <p className="p-8 text-center text-slate-500">{loaded ? 'Esa canción no existe o fue borrada.' : 'Cargando…'}</p>
-      </div>
-    )
-
+  const navigate = useNavigate()
+  const back = `/cancion/${id}`
   return (
     <div className="pb-24">
-      <Header
-        title={song.title}
-        back="/"
-        actions={
-          <>
-            {views.lyrics && <VoiceButton song={song} />}
-            {!editing && (
-              <button onClick={() => setEditing(true)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft" title="Ritmo y matiz por sección">
-                Editar
-              </button>
-            )}
-          </>
-        }
-      />
-      {editing ? <SectionsEditor key={song.updatedAt} song={song} onDone={() => setEditing(false)} /> : <Board song={song} autoPulse={!!prefs.autoPulse} onEdit={() => setEditing(true)} />}
-    </div>
-  )
-}
-
-export function Board({ song, autoPulse, onEdit, pagesTop = '4.5rem' }: { song: Song; autoPulse: boolean; onEdit?: () => void; pagesTop?: string }) {
-  const chart: DrumChart = useMemo(() => cleanDrums(song.drums) ?? { sections: [] }, [song.drums])
-  const rhythmsFor = useSectionRhythms(song, chart)
-  const blocks = useMemo(() => blocksOf(parseChordPro(song.content)), [song.content])
-  const anyRhythm = blocks.some((b) => {
-    const l = b.lines[0]?.line
-    return l?.type === 'section' && !!rhythmsFor(l.name).rhythm
-  })
-
-  return (
-    <div className="space-y-4 px-4 pt-4 md:landscape:mx-auto md:landscape:max-w-4xl">
-      <BigPulse bpm={song.bpm} feel={chart.feel} autoStart={autoPulse} />
-      {chart.feel && <p className="-mt-2 px-1 text-sm text-slate-500">Feel: {chart.feel}</p>}
-      {!anyRhythm && onEdit && (
-        <button onClick={onEdit} className="w-full rounded-2xl bg-accent-soft p-3 text-sm font-semibold text-accent">
-          Elegir el ritmo y el matiz de cada sección →
-        </button>
+      <Header title={song ? `Batería · ${song.title}` : 'Batería'} back={back} />
+      {song ? (
+        <SectionsEditor key={song.updatedAt} song={song} onDone={() => navigate(back)} />
+      ) : (
+        <p className="p-8 text-center text-slate-500">{loaded ? 'Esa canción no existe o fue borrada.' : 'Cargando…'}</p>
       )}
-
-      <section>
-        <h2 className="mb-2 px-1 text-xs font-bold tracking-wider text-slate-500 uppercase">Letra y ritmos por sección</h2>
-        {song.content.trim() ? (
-          <div className="pages space-y-1" style={{ ['--pages-top' as string]: pagesTop }}>
-            {blocks.map((b) => {
-              const first = b.lines[0]?.line
-              if (first?.type === 'cue')
-                return (
-                  <p key={b.start} className="my-2 break-inside-avoid text-sm font-semibold text-amber-800">
-                    ↻ {first.text}
-                  </p>
-                )
-              const name = first?.type === 'section' ? first.name : undefined
-              const lyrics = b.lines.flatMap((l) => (l.line.type === 'lyrics' ? [l.line.parts.map((p) => p.text).join('').trim()] : [])).filter(Boolean)
-              const d = name ? drumsFor(chart, name) : undefined
-              const info = name ? rhythmsFor(name) : undefined
-              const r = info?.rhythm
-              return (
-                <div key={b.start} className="mb-3 break-inside-avoid rounded-2xl bg-white p-3 shadow-sm ring-1 ring-line">
-                  {name && (
-                    <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold tracking-wider text-accent uppercase">{name}</span>
-                      {d?.dynamic && (
-                        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">
-                          <DynamicIcon dynamic={d.dynamic} size={15} />
-                          {dynLabel(d.dynamic)}
-                        </span>
-                      )}
-                      <span className="flex-1" />
-                      {r && <RhythmPlay id={`sec-${b.start}`} pattern={r.pattern} bpm={song.bpm ?? r.bpm} meter={r.meter} label={r.name} />}
-                      {info?.proposed && (
-                        <span className="basis-full text-right text-[11px] text-slate-500">
-                          {info.fromProposal
-                            ? `Propuesto por ${info.proposedBy ?? 'dirección'}`
-                            : info.proposed.id !== r?.id
-                              ? `${info.proposedBy ?? 'Dirección'} propone: ${info.proposed.name}`
-                              : `También lo propone ${info.proposedBy ?? 'dirección'}`}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {lyrics.length ? (
-                    <div className="text-[17px] leading-snug">
-                      {lyrics.map((l, i) => (
-                        <p key={i}>{l}</p>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-400">♪ Instrumental</p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="text-slate-500">Esta canción todavía no tiene letra.</p>
-        )}
-      </section>
     </div>
   )
 }

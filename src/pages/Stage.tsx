@@ -5,10 +5,10 @@ import { upcomingSunday, useService } from '../lib/service'
 import { formatClock, newClock, pause, readClock, resume, tick, type StageClock } from '../lib/stageClock'
 import { useMe, usePersonal, useSongs } from '../lib/store'
 import type { ServiceItem, Song } from '../types'
-import { ChordSheet } from '../components/ChordSheet'
 import { PulseButton } from '../components/Pulse'
-import { Board } from './DrumPage'
-import { usePref, VocalSheet } from './VocalView'
+import { SongBody } from '../components/SongBody'
+import { useFontSize, useShow, ViewMenu } from '../components/ViewMenu'
+import type { Show } from '../lib/show'
 
 /** Mantiene la pantalla encendida mientras se está en tarima (si el navegador lo permite). */
 function useWakeLock() {
@@ -75,23 +75,20 @@ function Clock({ label, ms, running }: { label: string; ms: number; running: boo
 /**
  * Modo tarima: todas las canciones del domingo en pestañas, para tablet en
  * horizontal. Sin botones de editar; solo se puede transponer (para ti).
+ * Lo que se ve es lo de cada quien ("Ver"), igual que en la canción.
  */
 export default function Stage() {
   const date = upcomingSunday()
   const { service, loaded } = useService(date)
   const songs = useSongs()
-  const { views, prefs, loaded: meLoaded } = useMe()
+  const { prefs, loaded: meLoaded } = useMe()
   const byId = new Map(songs.map((s) => [s.id, s]))
   const items = (service?.items ?? []).filter((i) => byId.has(i.songId))
   const [idx, setIdx] = useState(0)
   const [trans, setTrans] = useState<Record<string, number>>({})
-  // Cada quien ve la tarima de su instrumento: batería, voces, o la hoja (dirección e instrumentos)
-  const mode: 'hoja' | 'voces' | 'bateria' = views.primary
-  const [sheetFont, setSheetFont] = useState(() => Number(localStorage.getItem('alabanza:stageFont')) || 20)
-  const [vocalFont, setVocalFont] = usePref('alabanza:vocalFont', 26)
-  const fontSize = mode === 'voces' ? vocalFont : sheetFont
-  const setFontSize = (n: number) => (mode === 'voces' ? setVocalFont(n) : setSheetFont(n))
-  const fontStep = mode === 'voces' ? 3 : 2
+  // Lo de siempre de cada quien; lo que cambie con "Ver" se queda en toda la tarima
+  const { show, setShow, changed, reset: resetShow } = useShow()
+  const [fontSize, setFontSize, fontStep] = useFontSize(show.big)
   const item = items[Math.min(idx, items.length - 1)]
   const { clock, toggle, reset } = useStageClock(date, item?.songId)
   const top = useRef<HTMLDivElement>(null)
@@ -110,14 +107,6 @@ export default function Stage() {
   useEffect(() => {
     tabs.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [idx])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('alabanza:stageFont', String(sheetFont))
-    } catch {
-      /* nada */
-    }
-  }, [sheetFont])
 
   if (!items.length)
     return (
@@ -178,44 +167,40 @@ export default function Stage() {
             </button>
           </div>
           <div className="flex-1" />
-          {mode === 'hoja' && (
-            <KeyControl
-              key={song.id}
-              song={song}
-              item={item}
-              trans={trans[song.id] ?? 0}
-              setTrans={(n) => setTrans({ ...trans, [song.id]: n })}
-              showChords={views.chords}
-            />
-          )}
-          {/* En batería el tempo grande va en la hoja; aquí el pulso pequeño */}
-          {mode !== 'bateria' && <PulseButton key={'p' + song.id} bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />}
-          {mode !== 'bateria' && (
-            <div className="flex rounded-xl bg-panel text-sm">
-              <button onClick={() => setFontSize(Math.max(14, fontSize - fontStep))} className="px-2.5 py-2" aria-label="Letra más pequeña">
-                A−
-              </button>
-              <button onClick={() => setFontSize(Math.min(56, fontSize + fontStep))} className="px-2.5 py-2 font-semibold" aria-label="Letra más grande">
-                A+
-              </button>
-            </div>
-          )}
+          <KeyControl
+            key={song.id}
+            song={song}
+            item={item}
+            trans={trans[song.id] ?? 0}
+            setTrans={(n) => setTrans({ ...trans, [song.id]: n })}
+            showChords={show.chords}
+          />
+          {!show.tempo && <PulseButton key={'p' + song.id} bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />}
+          <div className="flex rounded-xl bg-panel text-sm">
+            <button onClick={() => setFontSize(fontSize - fontStep)} className="px-2.5 py-2" aria-label="Letra más pequeña">
+              A−
+            </button>
+            <button onClick={() => setFontSize(fontSize + fontStep)} className="px-2.5 py-2 font-semibold" aria-label="Letra más grande">
+              A+
+            </button>
+          </div>
+          <ViewMenu show={show} onChange={setShow} changed={changed} onReset={resetShow} />
         </div>
       </div>
 
       {!meLoaded ? (
         <p className="p-8 text-center text-slate-500">Cargando…</p>
-      ) : mode === 'bateria' ? (
-        <div className="pb-16">
-          {/* Tempo grande arriba y la letra por secciones con el ▶ de cada ritmo */}
-          <Board key={song.id} song={song} autoPulse={!!prefs.autoPulse} pagesTop={`${topH + 150}px`} />
-        </div>
-      ) : mode === 'voces' ? (
-        <div className="bg-white pb-16">
-          <VocalSheet key={song.id} song={song} fontSize={fontSize} pagesTop={`${topH + 24}px`} />
-        </div>
       ) : (
-        <StageSheet key={song.id} song={song} item={item} trans={trans[song.id] ?? 0} fontSize={fontSize} showChords={views.chords} pagesTop={`${topH + 16}px`} />
+        <StageSheet
+          key={song.id}
+          song={song}
+          item={item}
+          trans={trans[song.id] ?? 0}
+          fontSize={fontSize}
+          show={show}
+          autoPulse={prefs.autoPulse}
+          pagesTop={`${topH + 16}px`}
+        />
       )}
 
       {idx < items.length - 1 && (
@@ -273,15 +258,39 @@ function KeyControl({ song, item, trans, setTrans, showChords }: { song: Song; i
   )
 }
 
-function StageSheet({ song, item, trans, fontSize, showChords, pagesTop }: { song: Song; item: ServiceItem; trans: number; fontSize: number; showChords: boolean; pagesTop: string }) {
+function StageSheet({
+  song,
+  item,
+  trans,
+  fontSize,
+  show,
+  autoPulse,
+  pagesTop,
+}: {
+  song: Song
+  item: ServiceItem
+  trans: number
+  fontSize: number
+  show: Show
+  autoPulse?: boolean
+  pagesTop: string
+}) {
   const { semis, shapeKey } = useStageKey(song, item, trans)
+  const mine = usePersonal(song.id)
+  const notes = show.notes && mine.notes
   return (
-    <div className="px-4 pt-3 pb-16">
-      {song.content.trim() ? (
-        <ChordSheet content={song.content} semitones={semis} targetKey={shapeKey} showChords={showChords} fontSize={fontSize} drums={song.drums} columns pagesTop={pagesTop} />
-      ) : (
-        <p className="text-slate-500">Esta canción todavía no tiene letra ni acordes.</p>
-      )}
+    <div className={`px-4 pt-3 pb-16 ${show.big && !show.chords ? 'bg-white' : ''}`}>
+      {/* Mis notas, solo para leer (en tarima no se edita) */}
+      {notes && <p className="mb-3 rounded-xl border border-dashed border-accent/40 bg-white px-3 py-2 text-sm whitespace-pre-wrap">{notes}</p>}
+      <SongBody
+        song={song}
+        show={show}
+        semitones={semis}
+        targetKey={shapeKey}
+        fontSize={fontSize}
+        autoPulse={autoPulse}
+        pagesTop={notes ? `calc(${pagesTop} + 4rem)` : pagesTop}
+      />
     </div>
   )
 }

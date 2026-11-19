@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import type { Song, SongDraft } from '../types'
 import * as api from './api'
-import { viewsFor, type Member, type Prefs, type Role, type Views } from './team'
+import { type Member, type Prefs, type Role } from './team'
+import { defaultShow, type Show } from './show'
 import type { Personal, PersonalSong } from './personal'
 import type { LibraryRhythm } from './rhythm'
 
@@ -90,12 +91,12 @@ export function useStore<T>(pick: (s: State) => T): T {
 export const useSession = () => useStore((s) => s.session)
 export const useSongs = () => useStore((s) => s.songs)
 export const useMembers = () => useStore((s) => s.members)
-/** Mis preferencias y lo que veo según mis instrumentos. */
-export function useMe(): { prefs: Prefs; roles: Role[]; views: Views; loaded: boolean; isDirector: boolean } {
+/** Mis preferencias, mis instrumentos y lo que veo por defecto en una canción. */
+export function useMe(): { prefs: Prefs; roles: Role[]; show: Show; loaded: boolean; isDirector: boolean } {
   const me = useStore((s) => s.members.find((m) => m.username === s.session?.username))
   const prefs = me?.prefs ?? {}
   const roles = me?.roles ?? []
-  return { prefs, roles, views: viewsFor(roles, prefs.view), loaded: !!me, isDirector: roles.includes('direccion') }
+  return { prefs, roles, show: defaultShow(prefs), loaded: !!me, isDirector: roles.includes('direccion') }
 }
 export const usePersonal = (songId: string | undefined): PersonalSong => useStore((s) => (songId ? s.personal[songId] : undefined) ?? EMPTY)
 const EMPTY: PersonalSong = {}

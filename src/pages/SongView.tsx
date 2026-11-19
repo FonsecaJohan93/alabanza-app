@@ -4,39 +4,15 @@ import { capoSuggestion, guessKey, isChord, keyView, parseChordPro, semitonesBet
 import { ChordPanel } from '../components/ChordPanel'
 import { upcomingSunday, useService } from '../lib/service'
 import { savePersonal, saveSong, useMe, usePersonal, useSong, useStore } from '../lib/store'
-import { ChordSheet } from '../components/ChordSheet'
-import { DrumButton } from '../components/DrumButton'
-import { VoiceButton } from '../components/VoiceButton'
 import { PulseButton } from '../components/Pulse'
+import { SongBody } from '../components/SongBody'
+import { useFontSize, useShow, ViewMenu } from '../components/ViewMenu'
 import { ErrorBox, Header, TEMPO_LABEL } from '../components/ui'
-
-// Preferencias de cada persona en su teléfono (no se comparten con el equipo)
-function usePref<T>(key: string, initial: T): [T, (v: T) => void] {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key)
-      return raw === null ? initial : (JSON.parse(raw) as T)
-    } catch {
-      return initial
-    }
-  })
-  return [
-    value,
-    (v: T) => {
-      setValue(v)
-      try {
-        localStorage.setItem(key, JSON.stringify(v))
-      } catch {
-        /* nada */
-      }
-    },
-  ]
-}
 
 export default function SongView() {
   const { id } = useParams()
   const song = useSong(id)
-  const { prefs, views, isDirector } = useMe()
+  const { prefs, isDirector, roles } = useMe()
   const loaded = useStore((s) => s.loaded)
   const mine = usePersonal(id)
   const [trans, setTrans] = useState(0)
@@ -47,8 +23,10 @@ export default function SongView() {
   const [chordOpen, setChordOpen] = useState<string | null>(null)
   const [fixing, setFixing] = useState(false)
   const [fixError, setFixError] = useState<string | null>(null)
-  const [showChords, setShowChords] = usePref('alabanza:showChords', true)
-  const [fontSize, setFontSize] = usePref('alabanza:fontSize', 17)
+  // Qué se ve: lo de siempre (Mi perfil) o lo que cambié con "Ver" en esta canción
+  const { show, setShow, changed, reset } = useShow(id)
+  const showChords = show.chords
+  const [fontSize, setFontSize, fontStep] = useFontSize(show.big)
 
   if (!song)
     return (
@@ -100,8 +78,6 @@ export default function SongView() {
         back="/repertorio"
         actions={
           <>
-          {views.lyrics && <VoiceButton song={song} />}
-          {views.drums && <DrumButton song={song} />}
           <Link to={`/cancion/${song.id}/editar`} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent active:bg-accent-soft">
             Editar
           </Link>
@@ -148,21 +124,16 @@ export default function SongView() {
           </label>
         )}
         <div className="flex-1" />
-        <PulseButton bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />
-        <button
-          onClick={() => setShowChords(!showChords)}
-          className={`rounded-xl px-2.5 py-2 text-sm font-medium ${showChords ? 'bg-panel' : 'bg-accent text-white'}`}
-        >
-          {showChords ? 'Letra' : 'Acordes'}
-        </button>
+        {!show.tempo && <PulseButton bpm={song.bpm} feel={song.drums?.feel} autoStart={prefs.autoPulse} />}
         <div className="flex rounded-xl bg-panel text-sm">
-          <button onClick={() => setFontSize(Math.max(13, fontSize - 2))} className="px-2 py-2" aria-label="Letra más pequeña">
+          <button onClick={() => setFontSize(fontSize - fontStep)} className="px-2 py-2" aria-label="Letra más pequeña">
             A−
           </button>
-          <button onClick={() => setFontSize(Math.min(32, fontSize + 2))} className="px-2 py-2 font-semibold" aria-label="Letra más grande">
+          <button onClick={() => setFontSize(fontSize + fontStep)} className="px-2 py-2 font-semibold" aria-label="Letra más grande">
             A+
           </button>
         </div>
+        <ViewMenu show={show} onChange={setShow} changed={changed} onReset={reset} />
       </div>
 
       {trans !== 0 && (
@@ -212,27 +183,22 @@ export default function SongView() {
           </div>
         )}
         {song.notes && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm whitespace-pre-wrap text-amber-900">{song.notes}</p>}
-        <MyNotes key={song.id + (mine.updatedAt ?? '')} songId={song.id} initial={mine.notes ?? ''} />
+        {show.notes && <MyNotes key={song.id + (mine.updatedAt ?? '')} songId={song.id} initial={mine.notes ?? ''} />}
 
         <div className="mt-4">
-          {song.content.trim() ? (
-            <>
-              {showChords && songChords.length > 0 && <p className="mb-2 text-xs text-slate-400">Toca un acorde para ver cómo se pone en la guitarra.</p>}
-              <ChordSheet
-                content={song.content}
-                semitones={semis}
-                targetKey={shapeKey}
-                showChords={showChords}
-                fontSize={fontSize}
-                drums={song.drums}
-                columns
-                onChord={setChordOpen}
-              />
-              {chordOpen && <ChordPanel chords={songChords} initial={chordOpen} capo={capo} onClose={() => setChordOpen(null)} />}
-            </>
-          ) : (
-            <p className="text-slate-500">Esta canción todavía no tiene letra ni acordes.</p>
-          )}
+          {showChords && songChords.length > 0 && <p className="mb-2 text-xs text-slate-400">Toca un acorde para ver cómo se pone en la guitarra.</p>}
+          <SongBody
+            song={song}
+            show={show}
+            semitones={semis}
+            targetKey={shapeKey}
+            fontSize={fontSize}
+            pagesTop="8.5rem"
+            autoPulse={prefs.autoPulse}
+            onChord={setChordOpen}
+            canEditDrums={roles.includes('direccion') || roles.includes('bateria')}
+          />
+          {chordOpen && <ChordPanel chords={songChords} initial={chordOpen} capo={capo} onClose={() => setChordOpen(null)} />}
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3 text-sm">

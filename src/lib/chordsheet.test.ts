@@ -150,16 +150,21 @@ test('pulso: golpe correcto en el tiempo', async () => {
   assert.equal(beatsPerBar('Balada 4/4'), 4)
 })
 
-test('vistas según instrumentos', async () => {
-  const { viewsFor } = await import('./team.ts')
-  assert.deepEqual(viewsFor(['acustica']), { chords: true, lyrics: false, drums: false, primary: 'hoja' })
-  assert.deepEqual(viewsFor(['bateria']), { chords: false, lyrics: false, drums: true, primary: 'bateria' })
-  assert.deepEqual(viewsFor(['voz']), { chords: false, lyrics: true, drums: false, primary: 'voces' })
-  assert.equal(viewsFor(['direccion', 'voz']).drums, true)
-  assert.equal(viewsFor([]).chords, true) // sin instrumentos: todo
-  const mix = viewsFor(['voz', 'electrica'])
-  assert.ok(mix.chords && mix.lyrics && !mix.drums)
-  assert.equal(viewsFor(['acustica'], 'letra').primary, 'voces') // la elección manual manda
+test('qué ver: cada quien elige, no depende del instrumento', async () => {
+  const { cleanShow, defaultShow, DEFAULT_SHOW } = await import('./show.ts')
+  const { cleanPrefs } = await import('./team.ts')
+  assert.deepEqual(defaultShow({}), DEFAULT_SHOW)
+  // Quien ya tenía una vista elegida arranca parecido
+  assert.equal(defaultShow({ view: 'letra' }).chords, false)
+  assert.equal(defaultShow({ view: 'bateria' }).tempo, true)
+  // Lo que eligió en Mi perfil manda
+  assert.equal(defaultShow({ view: 'letra', show: { ...DEFAULT_SHOW, chords: true } }).chords, true)
+  // El servidor solo guarda interruptores conocidos y booleanos
+  assert.deepEqual(cleanShow({ chords: false, hack: true, tempo: 'sí' }), { ...DEFAULT_SHOW, chords: false })
+  assert.equal(cleanShow('x'), undefined)
+  const p = cleanPrefs({ show: { drums: true } }, { autoPulse: true, view: 'letra' })
+  assert.equal(p.autoPulse, true)
+  assert.equal(p.show?.drums, true)
 })
 
 test('estructura: leer, reordenar y volver a escribir', async () => {

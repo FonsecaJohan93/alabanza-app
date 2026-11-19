@@ -1,8 +1,6 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useMemo, type ReactNode } from 'react'
 import { blocksOf, parseChordPro, transposeChord, type SheetLine } from '../lib/chordsheet'
 import { CuePill } from './Cue'
-import { drumsFor, type DrumChart } from '../lib/drums'
-import { DynamicIcon, PartIcon } from './DrumIcons'
 
 type Seg = { chord?: string; text: string }
 
@@ -46,9 +44,10 @@ export function ChordSheet({
   targetKey,
   showChords = true,
   fontSize = 17,
-  drums,
+  showLyrics = true,
+  showCues = true,
+  sectionExtra,
   columns = false,
-  drumIcons,
   onChord,
   pagesTop = '8.5rem',
 }: {
@@ -57,11 +56,14 @@ export function ChordSheet({
   targetKey?: string
   showChords?: boolean
   fontSize?: number
-  drums?: DrumChart
+  /** Sin letra: quedan solo los acordes de cada sección. */
+  showLyrics?: boolean
+  /** Indicaciones del equipo ("coro 2 veces"…). */
+  showCues?: boolean
+  /** Algo junto al nombre de cada sección (la batería: matiz y ▶ del ritmo). */
+  sectionExtra?: (sectionName: string) => ReactNode
   /** En tablet horizontal, columnas que se pasan deslizando. */
   columns?: boolean
-  /** Mostrar los iconos de batería en las secciones (por defecto, solo con acordes). */
-  drumIcons?: boolean
   /** Tocar un acorde (ya transpuesto) para ver cómo se pone. */
   onChord?: (chord: string) => void
   /** Alto de lo que va arriba de la hoja (para que las columnas quepan en pantalla). */
@@ -76,24 +78,13 @@ export function ChordSheet({
       case 'empty':
         return null
       case 'cue':
-        return <CuePill key={i} text={line.text} />
+        return showCues ? <CuePill key={i} text={line.text} /> : null
       case 'section': {
-        const d = (drumIcons ?? showChords) ? drumsFor(drums, line.name) : undefined
+        const extra = sectionExtra?.(line.name)
         return (
           <div key={i} className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">{line.name}</span>
-            {d && (d.dynamic || d.parts.length > 0) && (
-              <span className="flex items-center gap-1 rounded-full bg-black/5 px-1.5 py-0.5 text-slate-500" title={d.note}>
-                {d.dynamic && (
-                  <span className="text-accent">
-                    <DynamicIcon dynamic={d.dynamic} size={16} />
-                  </span>
-                )}
-                {d.parts.map((p) => (
-                  <PartIcon key={p} part={p} size={16} />
-                ))}
-              </span>
-            )}
+            <span className="text-[max(0.75rem,0.45em)] font-bold tracking-wider text-slate-500 uppercase">{line.name}</span>
+            {extra}
           </div>
         )
       }
@@ -115,6 +106,19 @@ export function ChordSheet({
         ) : null
       case 'lyrics': {
         const hasChords = showChords && line.parts.some((p) => p.chord)
+        // Sin letra: solo los acordes de la línea, en fila
+        if (!showLyrics)
+          return hasChords ? (
+            <div key={i} className="flex flex-wrap gap-x-4 font-bold text-accent">
+              {line.parts
+                .filter((p) => p.chord)
+                .map((p, j) => (
+                  <span key={j} data-chord={t(p.chord!)}>
+                    {t(p.chord!)}
+                  </span>
+                ))}
+            </div>
+          ) : null
         if (!hasChords) return <div key={i}>{line.parts.map((p) => p.text).join('')}</div>
         return (
           <div key={i} className="mt-1">
@@ -155,6 +159,14 @@ export function ChordSheet({
     >
       {blocks.map((b) => {
         const rendered = b.lines.map(({ line, index }) => renderLine(line, index)).filter(Boolean)
+        // Sección sin letra (intro, solo…) cuando no se ven acordes: se marca como instrumental
+        const hasWords = b.lines.some(({ line }) => line.type === 'lyrics' && line.parts.some((p) => p.text.trim()))
+        if (!showChords && showLyrics && !hasWords && b.lines[0]?.line.type === 'section')
+          rendered.push(
+            <p key="inst" className="text-[0.7em] font-semibold tracking-wide text-slate-400">
+              ♪ Instrumental
+            </p>,
+          )
         return rendered.length ? (
           <div key={b.start} className="mb-4 break-inside-avoid">
             {rendered}
