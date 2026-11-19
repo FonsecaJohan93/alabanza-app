@@ -15,6 +15,7 @@ export const services = () => getStore({ name: 'services', consistency: 'strong'
 export const personal = () => getStore({ name: 'personal', consistency: 'strong' })
 /** Biblioteca de ritmos del equipo (un solo documento). */
 export const rhythmsStore = () => getStore({ name: 'rhythms', consistency: 'strong' })
+export const liveStore = () => getStore({ name: 'live', consistency: 'strong' })
 
 export interface UserRecord {
   username: string

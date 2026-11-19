@@ -89,6 +89,9 @@ export function transposeChord(chord: string, semis: number, _targetKey?: string
 
 /** Tono probable: el del primer acorde de la canción. */
 export function guessKey(chordpro: string): string {
+  // Si la página decía el tono ("Key: B"), ese manda
+  const declared = /\{\s*key\s*:\s*([A-G][#b]?m?)\s*\}/i.exec(chordpro)
+  if (declared) return declared[1]
   const m = /\[([A-G][#b]?)(m(?!aj))?[^\]]*\]/.exec(chordpro)
   return m ? m[1] + (m[2] ?? '') : ''
 }
@@ -120,15 +123,29 @@ export function capoSuggestion(key: string): { capo: number; shape: string } | n
 const SECTION_WORDS =
   'intro|introducci[oó]n|coro|estribillo|pre-?coro|pre coro|pre-?estribillo|verso|estrofa|puente|final|outro|coda|instrumental|interludio|solo|tag|tab|vamp|' +
   '(?:primera|segunda|tercera|cuarta) parte|' +
-  'chorus|pre-?chorus|verse|bridge|ending|' +
+  'chorus|pre-?chorus|verse|bridge|ending|(?:first|second|third|fourth) part|' +
   'refr[aã]o|pr[eé]-?refr[aã]o|p[oó]s-?refr[aã]o|post-?coro|pos-?coro|primeira parte|segunda parte|terceira parte|parte|ponte|introdu[cç][aã]o'
 const SECTION_RE = new RegExp(`^\\s*[\\[(]?\\s*((?:${SECTION_WORDS})\\b[^\\])]{0,20})[\\])]?\\s*:?\\s*$`, 'i')
+
+const EN_SECTIONS: [RegExp, string][] = [
+  [/^first part/i, 'Primera parte'],
+  [/^second part/i, 'Segunda parte'],
+  [/^third part/i, 'Tercera parte'],
+  [/^fourth part/i, 'Cuarta parte'],
+  [/^pre-?chorus/i, 'Pre-coro'],
+  [/^chorus/i, 'Coro'],
+  [/^verse/i, 'Verso'],
+  [/^bridge/i, 'Puente'],
+  [/^ending/i, 'Final'],
+]
 
 /** "Coro:", "[Puente]", "(Verso 2)" → nombre de la sección, o null. */
 export function sectionName(line: string): string | null {
   const m = SECTION_RE.exec(line)
   if (!m) return null
-  const name = m[1].trim().replace(/:$/, '')
+  let name = m[1].trim().replace(/:$/, '')
+  // Las páginas en inglés: el equipo lee en español
+  for (const [en, es] of EN_SECTIONS) name = name.replace(en, es)
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
@@ -153,7 +170,11 @@ function mergeChordsIntoLyrics(chordLine: string, lyric: string): string {
   const end = text.length
   // Un acorde que cae sobre un espacio se pega a la palabra siguiente (si no,
   // queda un hueco raro en la letra al mostrarla)
-  const chords = chordPositions(chordLine).map(({ col, chord: raw }) => {
+  // "( E   D#m  B ) C#m": los paréntesis agrupan acordes, no son acordes
+  const tokens = chordPositions(chordLine)
+    .map(({ col, chord }) => ({ col: col + (chord.match(/^\(+/)?.[0].length ?? 0), chord: chord.replace(/^\(+|\)+$/g, '') }))
+    .filter(({ chord }) => chord)
+  const chords = tokens.map(({ col, chord: raw }) => {
     const chord = raw.replace(/(?<=\S)[.,;]+$/, '')
     if (col >= end || text[col] !== ' ') return { col, chord }
     let c = col
@@ -176,8 +197,25 @@ function chordOnlyLine(line: string): string {
     .join('  ')
 }
 
+/**
+ * Al copiar de algunas páginas (Cifra Club, Ultimate Guitar…) cada línea trae
+ * caracteres invisibles (espacio de ancho cero) o espacios duros: con eso la
+ * línea de acordes no se reconocía.
+ */
+export function cleanSourceLine(text: string): string {
+  return text
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/[\u00A0\u2007\u202F]/g, ' ')
+    .replace(/\t/g, '    ')
+    .replace(/\s+$/, '')
+}
+
+const KEY_LINE_RE = /^\s*(?:key|tono|tom)\s*:\s*([A-G][#b]?m?)\s*$/i
+
 export function linesToChordPro(lines: SourceLine[]): string {
-  const src = lines.map((l) => ({ text: l.text.replace(/\t/g, '    ').replace(/\s+$/, ''), isChords: l.isChords }))
+  const src = lines
+    .map((l) => ({ text: cleanSourceLine(l.text), isChords: l.isChords }))
+
   const chordish = (i: number) => {
     const l = src[i]
     if (!l || !l.text.trim()) return false
@@ -190,6 +228,12 @@ export function linesToChordPro(lines: SourceLine[]): string {
       out.push('')
       continue
     }
+    // "Key: B" / "Tono: B": se guarda como dato, no como letra
+    const key = KEY_LINE_RE.exec(text)
+    if (key) {
+      out.push(`{key: ${key[1]}}`)
+      continue
+    }
     if (chordish(i)) {
       const next = src[i + 1]
       const nextIsLyric = next && next.text.trim() && !chordish(i + 1) && !sectionName(next.text)
@@ -200,7 +244,7 @@ export function linesToChordPro(lines: SourceLine[]): string {
       continue
     }
     // "[Intro] D G A" (Cifra Club): sección y acordes en la misma línea
-    const inline = /^\s*\[([^\]]+)\]\s+(.+)$/.exec(text)
+    const inline = /^\s*[[(]([^\])]+)[\])]\s+(.+)$/.exec(text)
     if (inline && sectionName(inline[1]) && isChordLine(inline[2])) {
       out.push(`{c: ${sectionName(inline[1])}}`)
       out.push(chordOnlyLine(inline[2]))

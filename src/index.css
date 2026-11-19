@@ -109,3 +109,15 @@ body {
     animation: none;
   }
 }
+
+/* Aviso de Dirección en tarima: entra desde arriba */
+@keyframes livein {
+  from {
+    opacity: 0;
+    transform: translateY(-1.5rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

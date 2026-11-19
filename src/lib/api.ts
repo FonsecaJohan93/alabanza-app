@@ -1,3 +1,4 @@
+import type { LiveMessage } from './live'
 import type { Service, ServiceItem, Song, SongDraft } from '../types'
 import type { ImportedSong, SearchResult } from './importers'
 import type { Personal, PersonalSong } from './personal'
@@ -109,3 +110,9 @@ export const deleteRhythmApi = (id: string) => call<void>(`/api/rhythms/${id}`, 
 /** Dirección cambia los instrumentos de otra persona. */
 export const saveMemberRoles = (username: string, roles: Role[]) =>
   call<{ member: Member }>(`/api/users/${username}`, { method: 'PUT', body: JSON.stringify({ roles }) }).then((r) => r.member)
+
+export const fetchLive = (date: string, since: number) =>
+  call<{ messages: LiveMessage[]; now: number }>(`/api/live/${date}?since=${since}`)
+
+export const sendLive = (date: string, text: string, song?: string) =>
+  call<{ message: LiveMessage }>(`/api/live/${date}`, { method: 'POST', body: JSON.stringify({ text, song }) }).then((r) => r.message)

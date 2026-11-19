@@ -309,3 +309,31 @@ test('biblioteca de ritmos del equipo y asignación personal', async () => {
   assert.equal(meterOf('Balada 4/4'), '4/4')
   assert.deepEqual(cleanPersonalSong({ rhythms: { coro: 'ab12', 'MALO!': 'x', verso: '<x>' } }).rhythms, { coro: 'ab12' })
 })
+
+test('pegado con caracteres invisibles y secciones entre paréntesis', () => {
+  const z = '\u200B'
+  const text = [
+    'Key: B',
+    '',
+    `${z}(Intro) E  F#/E  D#m`,
+    '',
+    `${z}(First Part)`,
+    '',
+    `${z}B         E/B`,
+    `${z}Hola mundo bonito`,
+    `${z}( E   D#m ) C#m`,
+    `${z}    Otra linea de prueba`,
+    '',
+    `${z}(Chorus)`,
+    `${z}( A  Bm  G )`,
+  ].join('\n')
+  const cp = textToChordPro(text)
+  assert.equal(guessKey(cp), 'B')
+  assert.ok(cp.includes('{c: Intro}\n[E]  [F#/E]  [D#m]'))
+  assert.ok(cp.includes('{c: Primera parte}'))
+  assert.ok(cp.includes('[B]Hola mundo [E/B]bonito'))
+  assert.ok(cp.includes('[E]Ot[D#m]ra lin[C#m]ea'), cp)
+  assert.ok(!cp.includes('[(]') && !cp.includes('[)]'))
+  assert.ok(cp.includes('{c: Coro}'))
+  assert.ok(!cp.includes('\u200B'))
+})
