@@ -191,7 +191,7 @@ export default function Stage() {
   const tabs = useRef<HTMLDivElement>(null)
   const page = useRef<HTMLDivElement>(null)
   useWakeLock()
-  const auto = useAutoScroll(item?.songId)
+  const auto = useAutoScroll(show.auto, (v) => setShow({ auto: v }), item?.songId)
 
   useEffect(() => {
     tabs.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })

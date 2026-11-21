@@ -28,7 +28,7 @@ export default function SongView() {
   const { show, setShow, changed, reset } = useShow(id)
   const showChords = show.chords
   const [fontSize, setFontSize, fontStep] = useFontSize(show.big)
-  const auto = useAutoScroll(id)
+  const auto = useAutoScroll(show.auto, (v) => setShow({ auto: v }), id)
 
   if (!song)
     return (

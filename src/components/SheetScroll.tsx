@@ -132,25 +132,35 @@ export const secondsPerColumn = (level: number) => Math.round(90 / level)
  * Autoscroll de la hoja. En vertical baja despacio y seguido. En columnas
  * (horizontal) no se mueve de a poco: espera unos segundos según la velocidad
  * y pasa de una a la siguiente columna. Si la persona mueve la hoja con el
- * dedo, espera un momento y sigue desde ahí. Al llegar al final se apaga.
+ * dedo, espera un momento y sigue desde ahí. Al llegar al final se detiene
+ * (en esa canción).
+ *
+ * Prendido o apagado es el interruptor "Autoscroll" de "Ver" (`wanted`), así
+ * cada quien lo deja prendido por defecto en Mi perfil. Al abrir una canción
+ * con él prendido espera unos segundos antes de empezar.
  */
-export function useAutoScroll(resetKey?: string) {
-  const [on, setOn] = useState(false)
+export function useAutoScroll(wanted: boolean, setWanted: (on: boolean) => void, resetKey?: string) {
+  // Llegó al final de esta canción (se queda quieto hasta que se vuelva a tocar "Auto")
+  const [ended, setEnded] = useState<string | undefined>()
+  const on = wanted && ended !== resetKey
+  const manual = useRef(false)
   const [speed, setSpeedState] = useState(readSpeed)
   const speedRef = useRef(speed)
   speedRef.current = speed
   // En columnas: cuántos segundos faltan para pasar (null = va bajando en vertical)
   const [left, setLeft] = useState<number | null>(null)
   const since = useRef(0)
-  useEffect(() => setOn(false), [resetKey])
   useWakeLock(on)
 
   useEffect(() => {
     if (!on) return
     const sheet = document.querySelector<HTMLElement>('.sheet')
-    if (!sheet) return setOn(false)
-    alignSheet(sheet)
-    let holdUntil = performance.now() + 600 // deja terminar el acomodo
+    if (!sheet) return
+    // Con el botón arranca ya; al abrir la canción, deja ver el comienzo un momento
+    const byHand = manual.current
+    manual.current = false
+    if (byHand) alignSheet(sheet)
+    let holdUntil = performance.now() + (byHand ? 600 : 3000)
     since.current = performance.now()
     const hold = () => {
       holdUntil = performance.now() + 1500
@@ -187,7 +197,7 @@ export function useAutoScroll(resetKey?: string) {
         const gone = (now - since.current) / 1000
         const max = el.scrollWidth - el.clientWidth
         if (gone >= wait) {
-          if (el.scrollLeft >= max - 1) return setOn(false) // ya se vio la última
+          if (el.scrollLeft >= max - 1) return setEnded(resetKey) // ya se vio la última
           const col = (parseFloat(cs.columnWidth) || fontPx * 17) + (parseFloat(cs.columnGap) || 48)
           const next = Math.min(max, (Math.round(el.scrollLeft / col) + 1) * col)
           el.scrollTo({ left: next, behavior: 'smooth' })
@@ -207,7 +217,7 @@ export function useAutoScroll(resetKey?: string) {
         pos = Math.min(max, pos + v * dt)
         el[p] = pos
         stuck = el[p] >= max - 1 ? stuck + dt : 0
-        if (stuck > 1.5) return setOn(false) // llegó al final
+        if (stuck > 1.5) return setEnded(resetKey) // llegó al final
       }
       raf = requestAnimationFrame(step)
     }
@@ -219,7 +229,7 @@ export function useAutoScroll(resetKey?: string) {
       window.removeEventListener('touchstart', hold, opts)
       window.removeEventListener('touchmove', hold, opts)
     }
-  }, [on])
+  }, [on, resetKey])
 
   const setSpeed = (n: number) => {
     const v = Math.min(MAX_SPEED, Math.max(MIN_SPEED, n))
@@ -231,7 +241,12 @@ export function useAutoScroll(resetKey?: string) {
       /* nada */
     }
   }
-  return { on, setOn, speed, setSpeed, left }
+  const start = () => {
+    manual.current = true
+    setEnded(undefined)
+    if (!wanted) setWanted(true)
+  }
+  return { on, start, stop: () => setWanted(false), speed, setSpeed, left }
 }
 
 /** Botón "Auto" y, cuando va andando, la velocidad. */
@@ -239,7 +254,7 @@ export function AutoScrollControl({ auto, big = false }: { auto: ReturnType<type
   const pad = big ? 'px-2.5 py-2' : 'px-2 py-2'
   if (!auto.on)
     return (
-      <button onClick={() => auto.setOn(true)} className={`rounded-xl bg-panel ${pad} text-sm font-semibold text-accent`} aria-label="Autoscroll">
+      <button onClick={auto.start} className={`rounded-xl bg-panel ${pad} text-sm font-semibold text-accent`} aria-label="Autoscroll">
         Auto ▶
       </button>
     )
@@ -258,7 +273,7 @@ export function AutoScrollControl({ auto, big = false }: { auto: ReturnType<type
       <button onClick={() => auto.setSpeed(auto.speed + 1)} disabled={auto.speed >= MAX_SPEED} className={`${pad} disabled:opacity-40`} aria-label="Más rápido">
         +
       </button>
-      <button onClick={() => auto.setOn(false)} className={`${pad} border-l border-white/30 font-semibold`} aria-label="Parar autoscroll">
+      <button onClick={auto.stop} className={`${pad} border-l border-white/30 font-semibold`} aria-label="Parar autoscroll">
         ■
       </button>
     </div>

@@ -11,6 +11,7 @@ export interface Show {
   drums: boolean
   notes: boolean
   big: boolean
+  auto: boolean
 }
 
 export const SHOW_ITEMS: { id: keyof Show; label: string; hint: string }[] = [
@@ -21,9 +22,10 @@ export const SHOW_ITEMS: { id: keyof Show; label: string; hint: string }[] = [
   { id: 'drums', label: 'Batería por sección', hint: 'Matices (suave, fuerte…) y ▶ del ritmo' },
   { id: 'notes', label: 'Mis notas y arreglos', hint: 'Lo que escribiste para ti' },
   { id: 'big', label: 'Letra grande', hint: 'Para cantar: la letra más grande' },
+  { id: 'auto', label: 'Autoscroll', hint: 'La hoja avanza sola (en horizontal, de columna en columna)' },
 ]
 
-export const DEFAULT_SHOW: Show = { chords: true, lyrics: true, cues: true, tempo: false, drums: false, notes: true, big: false }
+export const DEFAULT_SHOW: Show = { chords: true, lyrics: true, cues: true, tempo: false, drums: false, notes: true, big: false, auto: false }
 
 /** Lo que llega del cliente: solo interruptores conocidos y booleanos. */
 export function cleanShow(v: unknown): Show | undefined {
