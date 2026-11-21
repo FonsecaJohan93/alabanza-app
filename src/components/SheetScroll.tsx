@@ -125,16 +125,23 @@ function readSpeed() {
   }
 }
 
+/** En columnas: segundos que se queda en cada columna antes de pasar a la siguiente (vel 3 = 30 s). */
+export const secondsPerColumn = (level: number) => Math.round(90 / level)
+
 /**
- * Autoscroll de la hoja. Si va en columnas corre hacia el lado (a la misma
- * velocidad de lectura); si no, baja. Si la persona mueve la hoja con el dedo,
- * espera un momento y sigue desde ahí. Al llegar al final se apaga.
+ * Autoscroll de la hoja. En vertical baja despacio y seguido. En columnas
+ * (horizontal) no se mueve de a poco: espera unos segundos según la velocidad
+ * y pasa de una a la siguiente columna. Si la persona mueve la hoja con el
+ * dedo, espera un momento y sigue desde ahí. Al llegar al final se apaga.
  */
 export function useAutoScroll(resetKey?: string) {
   const [on, setOn] = useState(false)
   const [speed, setSpeedState] = useState(readSpeed)
   const speedRef = useRef(speed)
   speedRef.current = speed
+  // En columnas: cuántos segundos faltan para pasar (null = va bajando en vertical)
+  const [left, setLeft] = useState<number | null>(null)
+  const since = useRef(0)
   useEffect(() => setOn(false), [resetKey])
   useWakeLock(on)
 
@@ -144,7 +151,11 @@ export function useAutoScroll(resetKey?: string) {
     if (!sheet) return setOn(false)
     alignSheet(sheet)
     let holdUntil = performance.now() + 600 // deja terminar el acomodo
-    const hold = () => (holdUntil = performance.now() + 1500)
+    since.current = performance.now()
+    const hold = () => {
+      holdUntil = performance.now() + 1500
+      since.current = performance.now() // en columnas, la cuenta empieza de nuevo
+    }
     const opts = { passive: true, capture: true }
     window.addEventListener('wheel', hold, opts)
     window.addEventListener('touchstart', hold, opts)
@@ -168,14 +179,31 @@ export function useAutoScroll(resetKey?: string) {
         target = el
         prop = p
         pos = el[p]
+        since.current = now
       }
+      if (horiz) {
+        // Por páginas: se queda en la columna y, cumplido el tiempo, pasa a la siguiente
+        const wait = secondsPerColumn(speedRef.current)
+        const gone = (now - since.current) / 1000
+        const max = el.scrollWidth - el.clientWidth
+        if (gone >= wait) {
+          if (el.scrollLeft >= max - 1) return setOn(false) // ya se vio la última
+          const col = (parseFloat(cs.columnWidth) || fontPx * 17) + (parseFloat(cs.columnGap) || 48)
+          const next = Math.min(max, (Math.round(el.scrollLeft / col) + 1) * col)
+          el.scrollTo({ left: next, behavior: 'smooth' })
+          since.current = now
+        }
+        const l = Math.max(0, Math.ceil(wait - (now - since.current) / 1000))
+        setLeft((x) => (x === l ? x : l))
+        raf = requestAnimationFrame(step)
+        return
+      }
+      setLeft(null)
       // Lo movió la persona: seguir desde donde quedó
       if (Math.abs(el[p] - pos) > 3) pos = el[p]
       if (now >= holdUntil) {
-        let v = readingSpeed(speedRef.current, fontPx)
-        // En columnas: una columna de ancho por cada columna de alto leída
-        if (horiz) v *= ((parseFloat(cs.columnWidth) || fontPx * 17) + (parseFloat(cs.columnGap) || 48)) / Math.max(1, sheet.clientHeight)
-        const max = horiz ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight
+        const v = readingSpeed(speedRef.current, fontPx)
+        const max = el.scrollHeight - el.clientHeight
         pos = Math.min(max, pos + v * dt)
         el[p] = pos
         stuck = el[p] >= max - 1 ? stuck + dt : 0
@@ -185,6 +213,7 @@ export function useAutoScroll(resetKey?: string) {
     }
     raf = requestAnimationFrame(step)
     return () => {
+      setLeft(null)
       cancelAnimationFrame(raf)
       window.removeEventListener('wheel', hold, opts)
       window.removeEventListener('touchstart', hold, opts)
@@ -195,13 +224,14 @@ export function useAutoScroll(resetKey?: string) {
   const setSpeed = (n: number) => {
     const v = Math.min(MAX_SPEED, Math.max(MIN_SPEED, n))
     setSpeedState(v)
+    since.current = performance.now()
     try {
       localStorage.setItem(SPEED_KEY, String(v))
     } catch {
       /* nada */
     }
   }
-  return { on, setOn, speed, setSpeed }
+  return { on, setOn, speed, setSpeed, left }
 }
 
 /** Botón "Auto" y, cuando va andando, la velocidad. */
@@ -218,8 +248,12 @@ export function AutoScrollControl({ auto, big = false }: { auto: ReturnType<type
       <button onClick={() => auto.setSpeed(auto.speed - 1)} disabled={auto.speed <= MIN_SPEED} className={`${pad} disabled:opacity-40`} aria-label="Más lento">
         −
       </button>
-      <span className="min-w-[2.5rem] text-center font-semibold tabular-nums" aria-label={`Velocidad ${auto.speed}`}>
+      <span
+        className="min-w-[2.5rem] text-center font-semibold tabular-nums"
+        aria-label={auto.left === null ? `Velocidad ${auto.speed}` : `Velocidad ${auto.speed}: ${secondsPerColumn(auto.speed)} segundos por columna`}
+      >
         Vel {auto.speed}
+        {auto.left !== null && <span className="ml-1.5 font-normal text-white/75">{auto.left}s</span>}
       </span>
       <button onClick={() => auto.setSpeed(auto.speed + 1)} disabled={auto.speed >= MAX_SPEED} className={`${pad} disabled:opacity-40`} aria-label="Más rápido">
         +
