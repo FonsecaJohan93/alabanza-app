@@ -65,8 +65,20 @@ const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.strin
 
 export const login = (username: string, password: string) => call<Session>('/api/login', post({ username, password }))
 
-export const register = (username: string, password: string, name: string, invite: string) =>
-  call<Session>('/api/register', post({ username, password, name, invite }))
+export const register = (username: string, password: string, name: string, invite: string, email: string) =>
+  call<Session>('/api/register', post({ username, password, name, invite, email }))
+
+/** Manda al correo de la cuenta el enlace para cambiar la contraseña (y el usuario). */
+export const forgotPassword = (who: string) => call<{ sentTo: string }>('/api/forgot', post({ who }))
+
+export const resetPassword = (username: string, token: string, password: string) => call<Session>('/api/reset', post({ username, token, password }))
+
+/** Dirección: enlace de 24 h para que alguien sin correo cambie su contraseña. */
+export const resetLinkFor = (username: string) =>
+  call<{ link: string }>(`/api/reset-link/${encodeURIComponent(username)}`, { method: 'POST' }).then((r) => r.link)
+
+export const saveEmail = (email: string) =>
+  call<{ member: Member }>('/api/users/me', { method: 'PUT', body: JSON.stringify({ email }) }).then((r) => r.member)
 
 export const fetchSongs = () => call<{ songs: Song[] }>('/api/songs').then((r) => r.songs)
 

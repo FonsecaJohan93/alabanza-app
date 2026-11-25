@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useSession } from './lib/store'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import ServiceEdit from './pages/ServiceEdit'
 import SongList from './pages/SongList'
@@ -30,6 +31,8 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [pathname])
 
+  // El enlace para cambiar la contraseña se abre con o sin sesión
+  if (pathname === '/restablecer') return <ResetPassword />
   if (!session) return <Login />
 
   return (

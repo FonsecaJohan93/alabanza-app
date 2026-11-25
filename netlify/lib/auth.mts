@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { getStore } from '@netlify/blobs'
 import type { Prefs, Role } from '../../src/lib/team.ts'
 
@@ -26,6 +26,10 @@ export interface UserRecord {
   roles?: Role[]
   /** Preferencias de la persona (vista al abrir canciones, pulso automático). */
   prefs?: Prefs
+  /** Para recuperar la contraseña (y entrar con él en vez del usuario). Solo lo ve la persona. */
+  email?: string
+  /** Enlace pendiente para cambiar la contraseña: se guarda solo el hash. */
+  reset?: { hash: string; exp: number; at: number }
   createdAt: string
 }
 
@@ -70,5 +74,50 @@ export function userFromRequest(req: Request): string | null {
     return null
   }
 }
+
+/** Busca la cuenta por usuario o por correo (equipo pequeño: recorre la lista). */
+export async function findUser(who: unknown): Promise<UserRecord | null> {
+  if (typeof who !== 'string') return null
+  const v = who.trim().toLowerCase()
+  if (!v.includes('@')) {
+    const u = normalizeUsername(v)
+    return u ? ((await users().get(u, { type: 'json' })) as UserRecord | null) : null
+  }
+  return (await allUsers()).find((r) => r.email === v) ?? null
+}
+
+export async function allUsers(): Promise<UserRecord[]> {
+  const store = users()
+  const { blobs } = await store.list()
+  const all = await Promise.all(blobs.map((b) => store.get(b.key, { type: 'json' }) as Promise<UserRecord | null>))
+  return all.filter((r): r is UserRecord => !!r)
+}
+
+/** ¿Ese correo ya lo usa otra cuenta? */
+export async function emailTaken(email: string, except?: string) {
+  return (await allUsers()).some((r) => r.email === email && r.username !== except)
+}
+
+const sha = (t: string) => createHash('sha256').update(t).digest('hex')
+
+/** Crea el enlace para cambiar la contraseña: devuelve el token (va en el enlace) y el registro a guardar. */
+export function newReset(ms: number) {
+  const token = randomBytes(24).toString('base64url')
+  return { token, reset: { hash: sha(token), exp: Date.now() + ms, at: Date.now() } }
+}
+
+export function checkReset(token: unknown, rec: UserRecord): boolean {
+  if (typeof token !== 'string' || !rec.reset || rec.reset.exp < Date.now()) return false
+  return timingSafeEqual(Buffer.from(sha(token), 'hex'), Buffer.from(rec.reset.hash, 'hex'))
+}
+
+/** Dirección de la app para armar enlaces (la de Netlify; en local, la de la petición). */
+export function appUrl(req: Request) {
+  const env = Netlify.env.get('URL')
+  return env && !env.includes('localhost') ? env : new URL(req.url).origin
+}
+
+export const resetLink = (req: Request, username: string, token: string) =>
+  `${appUrl(req)}/restablecer?u=${encodeURIComponent(username)}&t=${encodeURIComponent(token)}`
 
 export const json = (body: unknown, status = 200) => Response.json(body, { status })

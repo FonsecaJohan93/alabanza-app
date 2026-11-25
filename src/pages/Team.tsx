@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { refreshMembers, saveMemberRoles, saveProfile, useMe, useMembers, useSession } from '../lib/store'
+import * as api from '../lib/api'
 import { ROLES, roleLabel, type Member, type Role } from '../lib/team'
 import { Button, ErrorBox, Field, Header, inputClass } from '../components/ui'
 
@@ -125,6 +126,7 @@ function MemberRow({ member: m, isMe, canEdit }: { member: Member; isMe: boolean
           </button>
         )}
       </div>
+      {canEdit && !isMe && <ResetLink member={m} />}
       {open && (
         <div className="mt-2 ml-12 space-y-2">
           <div className="flex flex-wrap gap-1.5">
@@ -154,5 +156,66 @@ function MemberRow({ member: m, isMe, canEdit }: { member: Member; isMe: boolean
         </div>
       )}
     </li>
+  )
+}
+
+/** Dirección: enlace para que alguien que olvidó la contraseña (y no tiene correo) ponga una nueva. */
+function ResetLink({ member: m }: { member: Member }) {
+  const [link, setLink] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  async function make() {
+    if (!confirm(`¿Crear un enlace para que ${m.name} ponga una contraseña nueva? Sirve por 24 horas.`)) return
+    setBusy(true)
+    setError(null)
+    try {
+      // Con la dirección desde la que se abrió la app (en local el servidor ve otro puerto)
+      const u = new URL(await api.resetLinkFor(m.username))
+      setLink(`${location.origin}${u.pathname}${u.search}`)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const text = () => `Hola ${m.name}, tu usuario de Alabanza es "${m.username}". Con este enlace pones una contraseña nueva (sirve por 24 horas): ${link}`
+
+  async function share() {
+    const nav = navigator as Navigator & { share?: (d: { text: string }) => Promise<void> }
+    if (nav.share) return void nav.share({ text: text() }).catch(() => {})
+    try {
+      await navigator.clipboard.writeText(text())
+      setCopied(true)
+    } catch {
+      setError('No se pudo copiar; mantén presionado el enlace para copiarlo')
+    }
+  }
+
+  if (!link)
+    return (
+      <div className="mt-1 ml-12">
+        <button onClick={make} disabled={busy} className="text-xs font-medium text-slate-500 underline disabled:opacity-50">
+          {busy ? 'Creando…' : '¿Olvidó la contraseña? Crear enlace'}
+        </button>
+        {error && <ErrorBox>{error}</ErrorBox>}
+      </div>
+    )
+  return (
+    <div className="mt-2 ml-12 space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
+      <p>
+        Mándale este enlace a {m.name} (sirve 24 horas). Su usuario es <b>{m.username}</b>.
+      </p>
+      <p className="break-all rounded-lg bg-white px-2 py-1 font-mono text-xs select-all">{link}</p>
+      <div className="flex gap-2">
+        <Button onClick={share}>{copied ? 'Copiado ✓' : 'Compartir / copiar'}</Button>
+        <Button variant="ghost" onClick={() => setLink(null)}>
+          Cerrar
+        </Button>
+      </div>
+      {error && <ErrorBox>{error}</ErrorBox>}
+    </div>
   )
 }

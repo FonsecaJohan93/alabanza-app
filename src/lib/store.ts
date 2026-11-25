@@ -181,6 +181,13 @@ export async function saveMemberRoles(username: string, roles: Role[]) {
 }
 
 /** Cambia el nombre y los instrumentos propios. */
+export async function saveEmail(email: string) {
+  const me = await api.saveEmail(email)
+  const members = state.members.map((m) => (m.username === me.username ? me : m))
+  writeMembers(members)
+  set({ members })
+}
+
 export async function saveProfile(name: string, roles: Role[] | undefined, prefs?: Prefs) {
   const me = await api.saveProfile(name, roles, prefs)
   if (state.session) {

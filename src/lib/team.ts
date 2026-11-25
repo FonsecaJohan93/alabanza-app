@@ -34,6 +34,8 @@ export interface Member {
   /** Lo que la persona sabe tocar o hacer. */
   roles: Role[]
   prefs?: Prefs
+  /** Solo viene en mi propia ficha ('' = aún no lo puse). */
+  email?: string
 }
 
 export function cleanAssignments(v: unknown): Assignment[] {

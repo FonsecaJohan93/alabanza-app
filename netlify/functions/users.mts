@@ -1,12 +1,20 @@
 import type { Config, Context } from '@netlify/functions'
-import { json, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
+import { emailTaken, json, userFromRequest, users, type UserRecord } from '../lib/auth.mts'
+import { cleanEmail } from '../../src/lib/account.ts'
 import { cleanPrefs, isRole, type Member } from '../../src/lib/team.ts'
 
 // El equipo: GET /api/users lista a todos (sin contraseñas);
 // PUT /api/users/me cambia el nombre y los instrumentos propios;
 // PUT /api/users/:username (solo Dirección) cambia los instrumentos de otra persona.
 
-const toMember = (r: UserRecord): Member => ({ username: r.username, name: r.name ?? r.username, roles: r.roles ?? [], prefs: r.prefs ?? {} })
+// El correo solo se le muestra a la misma persona
+const toMember = (r: UserRecord, viewer?: string): Member => ({
+  username: r.username,
+  name: r.name ?? r.username,
+  roles: r.roles ?? [],
+  prefs: r.prefs ?? {},
+  ...(viewer === r.username ? { email: r.email ?? '' } : {}),
+})
 
 export default async (req: Request, context: Context) => {
   const username = userFromRequest(req)
@@ -16,7 +24,7 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'GET' && !context.params.who) {
     const { blobs } = await store.list()
     const all = await Promise.all(blobs.map((b) => store.get(b.key, { type: 'json' }) as Promise<UserRecord | null>))
-    const members = all.filter((r): r is UserRecord => !!r).map(toMember)
+    const members = all.filter((r): r is UserRecord => !!r).map((r) => toMember(r, username))
     members.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
     return json({ members })
   }
@@ -28,9 +36,16 @@ export default async (req: Request, context: Context) => {
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 40) : rec.name
     const roles = Array.isArray(body.roles) ? [...new Set(body.roles.filter(isRole))] : (rec.roles ?? [])
     const prefs = cleanPrefs(body.prefs, rec.prefs ?? {})
-    const next: UserRecord = { ...rec, name, roles, prefs }
+    let email = rec.email
+    if (typeof body.email === 'string') {
+      const e = cleanEmail(body.email)
+      if (!e) return json({ error: 'Ese correo no parece válido' }, 400)
+      if (await emailTaken(e, username)) return json({ error: 'Ese correo ya lo usa otra cuenta' }, 409)
+      email = e
+    }
+    const next: UserRecord = { ...rec, name, roles, prefs, email }
     await store.setJSON(username, next)
-    return json({ member: toMember(next) })
+    return json({ member: toMember(next, username) })
   }
 
   // Dirección puede marcar los instrumentos de otra persona del equipo
